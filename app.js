@@ -1,5 +1,4 @@
 import express from 'express';
-import connection from "./database/db.js";
 import clientiRouter from "./routers/clienti.js";
 import cors from "cors"
 const app = express();
