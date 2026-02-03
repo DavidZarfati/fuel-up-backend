@@ -93,9 +93,7 @@ function singleProduct(req, res, next) {
     });
 }
 
-const controller = {
-    indexProductsPage,
-    singleProduct
+
 // Funzione per ottenere un singolo prodotto con tutti i dettagli correlati
 function show(req, res, next) {
     const id = req.params.id;
@@ -276,7 +274,8 @@ function search(req, res, next) {
 const controller = {
     index: indexProductsPage,
     show,
-    search
+    search,
+    singleProduct
 }
 
 export default controller;
