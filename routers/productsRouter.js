@@ -3,14 +3,15 @@ import productsController from "../controllers/productsController.js";
 
 const router = express.Router();
 
-router.get("/", productsController.indexProductsPage);
-router.get("/:slug", productsController.singleProduct)
-// Endpoint per cercare prodotti (DEVE stare PRIMA di /:id)
+
+// Endpoint per ottenere tutti i prodotti (paginati)
+router.get("/", productsController.index);
+
+// Endpoint per cercare prodotti
 router.get("/search", productsController.search);
 
-// router.get("/", productsController.indexProductsPage); // Removed: handler does not exist
-// Endpoint per ottenere tutti i prodotti
-router.get("/", productsController.index);
+// Endpoint per ottenere un singolo prodotto tramite slug
+router.get("/slug/:slug", productsController.singleProduct);
 
 // Endpoint per ottenere un singolo prodotto tramite ID
 router.get("/:id", productsController.show);
