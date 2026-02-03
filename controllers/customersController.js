@@ -1,7 +1,6 @@
 import connection from "../database/db.js";
 
-function index(req, res, next)
-{
+function index(req, res, next) {
     const indexQuery = "SELECT * FROM customers";
 
     connection.query(indexQuery, (err, result) => {
@@ -29,8 +28,11 @@ function index(req, res, next)
     })
 }
 
+
+
 const controller = {
-    index
+    index,
+   
 }
 
 export default controller;
