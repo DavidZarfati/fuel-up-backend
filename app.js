@@ -1,10 +1,16 @@
 import express from 'express';
+import ordersRouter from "./routers/ordersRouter.js";
+import cors from "cors"
 import customersRouter from "./routers/customersRouter.js";
 import productsRouter from "./routers/productsRouter.js"
-import cors from "cors"
 import categoriesRouter from "./routers/categoriesRouter.js";
+import errorHandler from './middlewares/errorHandler.js';
+import notFound from './middlewares/notFound.js';
+
 
 const app = express();
+app.use(express.json());
+
 const port = process.env.PORT;
 
 app.use(cors({
@@ -16,8 +22,11 @@ app.use(express.json());
 app.use("/api/products", productsRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/categories", categoriesRouter);
+app.use("/api/orders", ordersRouter);
 
 
+app.use(errorHandler);
+app.use(notFound);
 
 app.get("/", (req, resp) => {
     console.log("Rotta /");
