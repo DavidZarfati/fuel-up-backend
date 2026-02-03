@@ -36,20 +36,31 @@ function show(req, res, next) {
 function store(req, res, next) {
     const post = req.body;
 
-    const storeQuery =`
+    // Primo inserimento senza order_number
+    const storeQuery = `
     INSERT INTO invoices
-    (customers_id, order_number, delivery_fee, total_amount)
+    (customers_id, delivery_fee, total_amount)
     VALUES
-    (?, ?, ?, ?)`;
+    (?, ?, ?)`;
 
-    const values = [post.customers_id, post.order_number, post.delivery_fee, post.total_amount];
+    const values = [post.customers_id, post.delivery_fee, post.total_amount];
 
     connection.query(storeQuery, values, (err, result) => {
         if (err) return next(err);
 
-        return res.status(201).json({
-            message: "Order created successfully",
-            orderId: result
+        const newId = result.insertId;
+        const orderNumber = `ORD-2026-${newId + 10000}`;
+
+        // Aggiorna order_number con l'id appena creato
+        const updateQuery = `UPDATE invoices SET order_number = ? WHERE id = ?`;
+        connection.query(updateQuery, [orderNumber, newId], (err2) => {
+            if (err2) return next(err2);
+
+            return res.status(201).json({
+                message: "Order created successfully",
+                orderId: newId,
+                orderNumber: orderNumber
+            });
         });
     });
 }
