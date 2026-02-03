@@ -51,6 +51,51 @@ function indexProductsPage(req, res, next) {
     })
 }
 
+function singleProduct(req, res, next) {
+    const slug = req.params.slug;
+
+    const query = "SELECT * FROM products WHERE slug = ?";
+
+    connection.query(query, [slug], (err, results) => {
+        if (err) return next(err);
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                error: "Product not found",
+                message: "Prodotto non trovato"
+            });
+        }
+        const singleProduct = results.map((product) => ({
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            discont_price: product.discount_price,
+            image: product.image,
+            alt_text: product.alt_text,
+            created_at: product.created_at,
+            modified_at: product.modified_at,
+            stocking_unit: product.stocking_unit,
+            weight_kg: product.weight_kg,
+            brand: product.brand,
+            is_active: product.is_active,
+            color: product.color,
+            flavor: product.flavor,
+            size: product.size,
+            macro_categories_id: product.macro_categories_id,
+            manufacturer_note: product.manufacturer_note,
+        }))
+
+        res.json({
+            result: singleProduct
+        });
+    });
+}
+
+const controller = {
+    indexProductsPage,
+    singleProduct
 // Funzione per ottenere un singolo prodotto con tutti i dettagli correlati
 function show(req, res, next) {
     const id = req.params.id;
