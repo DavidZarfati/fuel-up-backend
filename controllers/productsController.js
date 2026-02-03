@@ -155,11 +155,83 @@ function show(req, res, next) {
     });
 }
 
+
+function search(req, res, next) {
+    // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein)
+    const searchTerm = req.query.q;
+    
+    // Controlla se è stato fornito un termine di ricerca
+    if (!searchTerm) {
+        return res.status(400).json({ 
+            errore: "ParametroMancante",
+            numero_errore: 400,
+            descrizione: "Il parametro di ricerca 'q' è obbligatorio." 
+        });
+    }
+    
+    // Query per cercare prodotti nel nome, descrizione o brand
+    const searchQuery = `
+        SELECT * FROM products 
+        WHERE name LIKE ? 
+        OR description LIKE ? 
+        OR brand LIKE ?
+    `;
+    
+    // Prepara il termine di ricerca con i caratteri jolly per il LIKE
+    const searchPattern = `%${searchTerm}%`;
+    
+    connection.query(searchQuery, [searchPattern, searchPattern, searchPattern], (err, results) => {
+        if (err) {
+            console.error("Errore durante la ricerca:", err);
+            return res.status(500).json({ errore: "Errore del server durante la ricerca", details: err });
+        }
+        
+        // Se non ci sono risultati
+        if (results.length === 0) {
+            return res.json({
+                messaggio: "Nessun prodotto trovato",
+                termine_ricerca: searchTerm,
+                risultati: []
+            });
+        }
+        
+        // Mappa i risultati
+        const prodottiTrovati = results.map(p => ({
+            id: p.id,
+            slug: p.slug,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            discount_price: p.discount_price,
+            image: p.image,
+            alt_text: p.alt_text,
+            created_at: p.created_at,
+            modified_at: p.modified_at,
+            stocking_unit: p.stocking_unit,
+            weight_kg: p.weight_kg,
+            brand: p.brand,
+            is_active: p.is_active,
+            color: p.color,
+            flavor: p.flavor,
+            size: p.size,
+            macro_categories_id: p.macro_categories_id,
+            manufacturer_note: p.manufacturer_note
+        }));
+        
+        res.json({
+            messaggio: `Trovati ${prodottiTrovati.length} prodotti`,
+            termine_ricerca: searchTerm,
+            risultati: prodottiTrovati
+        });
+    });
+}
+
 // Esporta le funzioni del controller
 
 const controller = {
     index: indexProductsPage,
-    show
+    show,
+    search
 }
 
 export default controller;
