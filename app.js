@@ -1,8 +1,11 @@
 import express from 'express';
+import cors from "cors"
 import customersRouter from "./routers/customersRouter.js";
 import productsRouter from "./routers/productsRouter.js"
-import cors from "cors"
 import categoriesRouter from "./routers/categoriesRouter.js";
+import errorHandler from './middlewares/errorHandler.js';
+import notFound from './middlewares/notFound.js';
+
 
 const app = express();
 const port = process.env.PORT;
@@ -17,6 +20,9 @@ app.use("/api/products", productsRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/categories", categoriesRouter);
 
+
+app.use(errorHandler);
+app.use(notFound);
 
 
 app.get("/", (req, resp) => {
