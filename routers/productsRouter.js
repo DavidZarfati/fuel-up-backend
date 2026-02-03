@@ -3,7 +3,7 @@ import productsController from "../controllers/productsController.js";
 
 const router = express.Router();
 
-router.get("/", productsController.indexProductsPage);
+// router.get("/", productsController.indexProductsPage); // Removed: handler does not exist
 // Endpoint per ottenere tutti i prodotti
 router.get("/", productsController.index);
 
