@@ -7,16 +7,16 @@ const port = process.env.PORT;
 
 app.use(cors({
     origin: process.env.FRONTEND_URL_ORIGIN
-}))
-app.use(express.static("public"))
+}));
+app.use(express.static("public"));
 
-app.use(express.json())
+app.use(express.json());
 
 app.use("/api/customers", customersRouter);
 
 app.get("/", (req, resp) => {
     console.log("Rotta /");
-    resp.send("test")
+    resp.send("test");
 });
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
