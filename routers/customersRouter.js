@@ -1,4 +1,3 @@
-import connection from "../database/db.js";
 import express from "express";
 import customersController from "../controllers/customersController.js";
 

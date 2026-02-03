@@ -29,4 +29,8 @@ function index(req, res, next)
     })
 }
 
-export default {index};
+const controller = {
+    index
+}
+
+export default controller;

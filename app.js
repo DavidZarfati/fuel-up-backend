@@ -1,6 +1,7 @@
 import express from 'express';
 import customersRouter from "./routers/customersRouter.js";
 import cors from "cors"
+
 const app = express();
 const port = process.env.PORT;
 
@@ -11,7 +12,7 @@ app.use(express.static("public"))
 
 app.use(express.json())
 
-app.use("/api/clienti", customersRouter);
+app.use("/api/customers", customersRouter);
 
 app.get("/", (req, resp) => {
     console.log("Rotta /");
