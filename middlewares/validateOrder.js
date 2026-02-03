@@ -32,6 +32,10 @@ function validateOrder(req, res, next)
             });
         }
 
+        //total_amount
+
+        //delivery_feet
+
         next();
     })
 }
