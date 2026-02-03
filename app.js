@@ -1,8 +1,11 @@
 import express from 'express';
 import customersRouter from "./routers/customersRouter.js";
+import ordersRouter from "./routers/ordersRouter.js";
 import cors from "cors"
 
 const app = express();
+app.use(express.json());
+
 const port = process.env.PORT;
 
 app.use(cors({
@@ -13,6 +16,7 @@ app.use(express.static("public"));
 app.use(express.json());
 
 app.use("/api/customers", customersRouter);
+app.use("/api/orders", ordersRouter);
 
 app.get("/", (req, resp) => {
     console.log("Rotta /");
