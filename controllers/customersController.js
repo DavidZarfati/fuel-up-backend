@@ -1,16 +1,16 @@
 import connection from "../database/db.js";
-import express from "express";
-const router = express.Router();
 
-// Endpoint per ottenere tutti i clienti
-router.get("/clienti", (req, res) => {
-    connection.query("SELECT * FROM customers", (err, results) => {
+function index(req, res, next)
+{
+    const indexQuery = "SELECT * FROM customers";
+
+    connection.query(indexQuery, (err, result) => {
         if (err) {
             console.error("Errore durante la query:", err);
             return res.status(500).json({ error: "Errore del server" });
         }
-        // Ogni cliente come oggetto ordinato
-        const clientiOrdinati = results.map(c => ({
+
+        const clientiOrdinati = result.map(c => ({
             id: c.id,
             name: c.name,
             surname: c.surname,
@@ -26,7 +26,7 @@ router.get("/clienti", (req, res) => {
             fiscal_code: c.fiscal_code
         }));
         res.json(clientiOrdinati);
-    });
-});
+    })
+}
 
-export default router;
+export default {index};
