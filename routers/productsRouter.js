@@ -3,6 +3,9 @@ import productsController from "../controllers/productsController.js";
 
 const router = express.Router();
 
+// Endpoint per cercare prodotti (DEVE stare PRIMA di /:id)
+router.get("/search", productsController.search);
+
 // router.get("/", productsController.indexProductsPage); // Removed: handler does not exist
 // Endpoint per ottenere tutti i prodotti
 router.get("/", productsController.index);
