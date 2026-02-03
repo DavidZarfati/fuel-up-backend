@@ -7,7 +7,7 @@ function validateOrder(req, res, next) {
 
     const {customers_id, delivery_fee, total_amount} = req.body;
 
-    if (!customers_id || !delivery_fee || !total_amount) {
+    if ((!customers_id && customers_id != 0) || (!delivery_fee && delivery_fee != 0) || (!total_amount && total_amount != 0)) {
         return res.status(400).json({
             error: "Missing required fields",
             required: ["customers_id", "delivery_fee", "total_amount"]
@@ -40,7 +40,7 @@ function validateOrder(req, res, next) {
         }
         else
         {
-            if(total_amount < 0 || total_amount > 999999.99)
+            if(total_amount <= 0 || total_amount > 999999.99)
             {
                 return res.status(400).json({
                     error: "total_amount is not a valid number",
