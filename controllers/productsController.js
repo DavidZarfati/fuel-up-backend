@@ -201,7 +201,20 @@ function show(req, res, next) {
 
 function search(req, res, next) {
     // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein)
+    //esempio di chiamata con tutti le query (esempio:localhost:3000/api/products/search?q=protein&order_by=price&order_dir=asc&limit=6)
     const searchTerm = req.query.q;
+    const limit = parseInt(req.query.limit) || 12;
+    const safeLimit = Math.min(limit, 100);
+
+    const orderBy = req.query.order_by || "created_at";
+    const orderDir = req.query.order_dir || "desc";
+
+    const allowedOrderBy = ["name", "price", "created_ad","brand" ];
+    const allowedOrderDir = ["asc", "desc"];
+
+    const safeOrderBy = allowedOrderBy.includes(orderBy)? orderBy: "created_at";
+    const safeOrderDir = allowedOrderDir.includes(orderDir.toLowerCase())? orderDir.toUpperCase(): "DESC"
+
     
     // Controlla se è stato fornito un termine di ricerca
     if (!searchTerm) {
@@ -218,6 +231,8 @@ function search(req, res, next) {
         WHERE name LIKE ? 
         OR description LIKE ? 
         OR brand LIKE ?
+        ORDER BY ${safeOrderBy} ${safeOrderDir}
+        limit ${safeLimit}
     `;
     
     // Prepara il termine di ricerca con i caratteri jolly per il LIKE
@@ -264,6 +279,11 @@ function search(req, res, next) {
         res.json({
             messaggio: `Trovati ${prodottiTrovati.length} prodotti`,
             termine_ricerca: searchTerm,
+            ordine:{
+                campo: safeOrderBy,
+                direzione: safeOrderDir
+            },
+            limite: safeLimit,
             risultati: prodottiTrovati
         });
     });
