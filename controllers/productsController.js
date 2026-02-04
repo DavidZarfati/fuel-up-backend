@@ -51,6 +51,49 @@ function indexProductsPage(req, res, next) {
     })
 }
 
+function singleProduct(req, res, next) {
+    const slug = req.params.slug;
+
+    const query = "SELECT * FROM products WHERE slug = ?";
+
+    connection.query(query, [slug], (err, results) => {
+        if (err) return next(err);
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                error: "Product not found",
+                message: "Prodotto non trovato"
+            });
+        }
+        const singleProduct = results.map((product) => ({
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            discont_price: product.discount_price,
+            image: product.image,
+            alt_text: product.alt_text,
+            created_at: product.created_at,
+            modified_at: product.modified_at,
+            stocking_unit: product.stocking_unit,
+            weight_kg: product.weight_kg,
+            brand: product.brand,
+            is_active: product.is_active,
+            color: product.color,
+            flavor: product.flavor,
+            size: product.size,
+            macro_categories_id: product.macro_categories_id,
+            manufacturer_note: product.manufacturer_note,
+        }))
+
+        res.json({
+            result: singleProduct
+        });
+    });
+}
+
+
 // Funzione per ottenere un singolo prodotto con tutti i dettagli correlati
 function show(req, res, next) {
     const id = req.params.id;
@@ -157,81 +200,216 @@ function show(req, res, next) {
 
 
 function search(req, res, next) {
-    // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein)
+    // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein) 
+    //esempio di chiamata con tutti le query (esempio:localhost:3000/api/products/search?q=protein&order_by=price&order_dir=asc&limit=6) 
     const searchTerm = req.query.q;
-    
-    // Controlla se è stato fornito un termine di ricerca
+    const limit = parseInt(req.query.limit) || 12;
+    const page = parseInt(req.query.page) || 1;
+
+    const safeLimit = Math.min(limit, 100);
+    const safePage = page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
+
+    const orderBy = req.query.order_by || "created_at";
+    const orderDir = req.query.order_dir || "desc";
+
+    const allowedOrderBy = ["name", "price", "created_at", "brand"];
+    const allowedOrderDir = ["asc", "desc"];
+
+    const safeOrderBy = allowedOrderBy.includes(orderBy)
+        ? orderBy
+        : "created_at";
+
+    const safeOrderDir = allowedOrderDir.includes(orderDir.toLowerCase())
+        ? orderDir.toUpperCase()
+        : "DESC";
+    // Controlla se è stato fornito un termine di ricerca 
     if (!searchTerm) {
-        return res.status(400).json({ 
+        return res.status(400).json({
             errore: "ParametroMancante",
             numero_errore: 400,
-            descrizione: "Il parametro di ricerca 'q' è obbligatorio." 
+            descrizione: "Il parametro di ricerca 'q' è obbligatorio."
         });
     }
-    
-    // Query per cercare prodotti nel nome, descrizione o brand
-    const searchQuery = `
-        SELECT * FROM products 
-        WHERE name LIKE ? 
-        OR description LIKE ? 
+    // Prepara il termine di ricerca con i caratteri jolly per il LIKE 
+    const searchPattern = `%${searchTerm}%`;
+
+    // Query per il totale
+    const countQuery = `
+        SELECT COUNT(*) AS total
+        FROM products
+        WHERE name LIKE ?
+        OR description LIKE ?
         OR brand LIKE ?
     `;
-    
-    // Prepara il termine di ricerca con i caratteri jolly per il LIKE
-    const searchPattern = `%${searchTerm}%`;
-    
-    connection.query(searchQuery, [searchPattern, searchPattern, searchPattern], (err, results) => {
-        if (err) {
-            console.error("Errore durante la ricerca:", err);
-            return res.status(500).json({ errore: "Errore del server durante la ricerca", details: err });
+
+    // Query per cercare prodotti nel nome, descrizione o brand 
+    const dataQuery = `
+        SELECT * FROM products
+        WHERE name LIKE ?
+        OR description LIKE ?
+        OR brand LIKE ?
+        ORDER BY ${safeOrderBy} ${safeOrderDir}
+        LIMIT ${safeLimit} OFFSET ${offset}
+    `;
+
+   
+    connection.query(
+        countQuery,
+        [searchPattern, searchPattern, searchPattern],
+        (err, countResult) => {
+            if (err) {
+                console.error("Errore COUNT:", err);
+                return res.status(500).json({ errore: "Errore del server" });
+            }
+
+            const totalProducts = countResult[0].total;
+            const totalPages = Math.ceil(totalProducts / safeLimit);
+
+            
+            connection.query(
+                dataQuery,
+                [searchPattern, searchPattern, searchPattern],
+                (err, results) => {
+                    if (err) {
+                        console.error("Errore ricerca:", err);
+                        return res.status(500).json({ errore: "Errore del server" });
+                    }
+
+                    if (results.length === 0) {
+                        return res.json({
+                            messaggio: "Nessun prodotto trovato",
+                            termine_ricerca: searchTerm,
+                            total: 0,
+                            risultati: []
+                        });
+                    }
+
+                    const prodottiTrovati = results.map(p => ({
+                        id: p.id,
+                        slug: p.slug,
+                        name: p.name,
+                        description: p.description,
+                        price: p.price,
+                        discount_price: p.discount_price,
+                        image: p.image,
+                        alt_text: p.alt_text,
+                        created_at: p.created_at,
+                        modified_at: p.modified_at,
+                        stocking_unit: p.stocking_unit,
+                        weight_kg: p.weight_kg,
+                        brand: p.brand,
+                        is_active: p.is_active,
+                        color: p.color,
+                        flavor: p.flavor,
+                        size: p.size,
+                        macro_categories_id: p.macro_categories_id,
+                        manufacturer_note: p.manufacturer_note
+                    }));
+
+                    res.json({
+                        messaggio: `Trovati ${totalProducts} prodotti`,
+                        termine_ricerca: searchTerm,
+                        ordine: {
+                            campo: safeOrderBy,
+                            direzione: safeOrderDir
+                        },
+                        paginazione: {
+                            pagina_corrente: safePage,
+                            per_pagina: safeLimit,
+                            totale_risultati: totalProducts,
+                            totale_pagine: totalPages
+                        },
+                        risultati: prodottiTrovati
+                    });
+                }
+            );
         }
-        
-        // Se non ci sono risultati
-        if (results.length === 0) {
-            return res.json({
-                messaggio: "Nessun prodotto trovato",
-                termine_ricerca: searchTerm,
-                risultati: []
+    );
+}
+
+// Cerca prodotti che condividono più categorie con un prodotto dato
+function searchByCategories(req, res, next) {
+    // Puoi passare l'id o lo slug del prodotto come parametro
+    const productId = req.params.id;
+    if (!productId) {
+        return res.status(400).json({ errore: "ParametroMancante", descrizione: "ID prodotto richiesto" });
+    }
+
+    // 1. Trova le categorie del prodotto di partenza
+    const categoriesQuery = `
+        SELECT category_id
+        FROM products_categories
+        WHERE product_id = ?
+    `;
+
+    connection.query(categoriesQuery, [productId], (err, catResults) => {
+        if (err) return next(err);
+        if (!catResults.length) {
+            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
+        }
+        const categoryIds = catResults.map(r => r.category_id);
+        if (!categoryIds.length) {
+            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
+        }
+
+        // 2. Trova altri prodotti che condividono almeno una categoria
+        // Conta quante categorie in comune per ogni prodotto
+        const placeholders = categoryIds.map(() => '?').join(',');
+        const similarProductsQuery = `
+            SELECT 
+                pc.product_id,
+                COUNT(*) AS shared_categories,
+                p.*
+            FROM products_categories pc
+            INNER JOIN products p ON p.id = pc.product_id
+            WHERE pc.category_id IN (${placeholders})
+              AND pc.product_id != ?
+            GROUP BY pc.product_id
+            ORDER BY shared_categories DESC, p.name ASC
+        `;
+        const params = [...categoryIds, productId];
+        connection.query(similarProductsQuery, params, (err, results) => {
+            if (err) return next(err);
+
+            const prodotti = results.map(p => ({
+                id: p.id,
+                slug: p.slug,
+                name: p.name,
+                description: p.description,
+                price: p.price,
+                discount_price: p.discount_price,
+                image: p.image,
+                alt_text: p.alt_text,
+                created_at: p.created_at,
+                modified_at: p.modified_at,
+                stocking_unit: p.stocking_unit,
+                weight_kg: p.weight_kg,
+                brand: p.brand,
+                is_active: p.is_active,
+                color: p.color,
+                flavor: p.flavor,
+                size: p.size,
+                macro_categories_id: p.macro_categories_id,
+                manufacturer_note: p.manufacturer_note,
+                shared_categories: p.shared_categories
+            }));
+
+            res.json({
+                prodotto_base: productId,
+                categorie_condivise: categoryIds.length,
+                risultati: prodotti
             });
-        }
-        
-        // Mappa i risultati
-        const prodottiTrovati = results.map(p => ({
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            description: p.description,
-            price: p.price,
-            discount_price: p.discount_price,
-            image: p.image,
-            alt_text: p.alt_text,
-            created_at: p.created_at,
-            modified_at: p.modified_at,
-            stocking_unit: p.stocking_unit,
-            weight_kg: p.weight_kg,
-            brand: p.brand,
-            is_active: p.is_active,
-            color: p.color,
-            flavor: p.flavor,
-            size: p.size,
-            macro_categories_id: p.macro_categories_id,
-            manufacturer_note: p.manufacturer_note
-        }));
-        
-        res.json({
-            messaggio: `Trovati ${prodottiTrovati.length} prodotti`,
-            termine_ricerca: searchTerm,
-            risultati: prodottiTrovati
         });
     });
 }
 
-// Esporta le funzioni del controller
-
 const controller = {
     index: indexProductsPage,
     show,
-    search
+    search,
+    singleProduct,
+    searchByCategories
 }
 
 export default controller;
