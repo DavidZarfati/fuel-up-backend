@@ -328,13 +328,88 @@ function search(req, res, next) {
     );
 }
 
-// Esporta le funzioni del controller
+// Cerca prodotti che condividono più categorie con un prodotto dato
+function searchByCategories(req, res, next) {
+    // Puoi passare l'id o lo slug del prodotto come parametro
+    const productId = req.params.id;
+    if (!productId) {
+        return res.status(400).json({ errore: "ParametroMancante", descrizione: "ID prodotto richiesto" });
+    }
+
+    // 1. Trova le categorie del prodotto di partenza
+    const categoriesQuery = `
+        SELECT category_id
+        FROM products_categories
+        WHERE product_id = ?
+    `;
+
+    connection.query(categoriesQuery, [productId], (err, catResults) => {
+        if (err) return next(err);
+        if (!catResults.length) {
+            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
+        }
+        const categoryIds = catResults.map(r => r.category_id);
+        if (!categoryIds.length) {
+            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
+        }
+
+        // 2. Trova altri prodotti che condividono almeno una categoria
+        // Conta quante categorie in comune per ogni prodotto
+        const placeholders = categoryIds.map(() => '?').join(',');
+        const similarProductsQuery = `
+            SELECT 
+                pc.product_id,
+                COUNT(*) AS shared_categories,
+                p.*
+            FROM products_categories pc
+            INNER JOIN products p ON p.id = pc.product_id
+            WHERE pc.category_id IN (${placeholders})
+              AND pc.product_id != ?
+            GROUP BY pc.product_id
+            ORDER BY shared_categories DESC, p.name ASC
+        `;
+        const params = [...categoryIds, productId];
+        connection.query(similarProductsQuery, params, (err, results) => {
+            if (err) return next(err);
+
+            const prodotti = results.map(p => ({
+                id: p.id,
+                slug: p.slug,
+                name: p.name,
+                description: p.description,
+                price: p.price,
+                discount_price: p.discount_price,
+                image: p.image,
+                alt_text: p.alt_text,
+                created_at: p.created_at,
+                modified_at: p.modified_at,
+                stocking_unit: p.stocking_unit,
+                weight_kg: p.weight_kg,
+                brand: p.brand,
+                is_active: p.is_active,
+                color: p.color,
+                flavor: p.flavor,
+                size: p.size,
+                macro_categories_id: p.macro_categories_id,
+                manufacturer_note: p.manufacturer_note,
+                shared_categories: p.shared_categories
+            }));
+
+            res.json({
+                prodotto_base: productId,
+                categorie_condivise: categoryIds.length,
+                risultati: prodotti
+            });
+        });
+    });
+}
 
 const controller = {
     index: indexProductsPage,
     show,
     search,
-    singleProduct
+    singleProduct,
+    searchByCategories
 }
 
 export default controller;
