@@ -200,93 +200,132 @@ function show(req, res, next) {
 
 
 function search(req, res, next) {
-    // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein)
-    //esempio di chiamata con tutti le query (esempio:localhost:3000/api/products/search?q=protein&order_by=price&order_dir=asc&limit=6)
+    // Prendi il parametro di ricerca dalla query string (es: /products/search?q=protein) 
+    //esempio di chiamata con tutti le query (esempio:localhost:3000/api/products/search?q=protein&order_by=price&order_dir=asc&limit=6) 
     const searchTerm = req.query.q;
     const limit = parseInt(req.query.limit) || 12;
+    const page = parseInt(req.query.page) || 1;
+
     const safeLimit = Math.min(limit, 100);
+    const safePage = page > 0 ? page : 1;
+    const offset = (safePage - 1) * safeLimit;
 
     const orderBy = req.query.order_by || "created_at";
     const orderDir = req.query.order_dir || "desc";
 
-    const allowedOrderBy = ["name", "price", "created_ad","brand" ];
+    const allowedOrderBy = ["name", "price", "created_at", "brand"];
     const allowedOrderDir = ["asc", "desc"];
 
-    const safeOrderBy = allowedOrderBy.includes(orderBy)? orderBy: "created_at";
-    const safeOrderDir = allowedOrderDir.includes(orderDir.toLowerCase())? orderDir.toUpperCase(): "DESC"
+    const safeOrderBy = allowedOrderBy.includes(orderBy)
+        ? orderBy
+        : "created_at";
 
-    
-    // Controlla se è stato fornito un termine di ricerca
+    const safeOrderDir = allowedOrderDir.includes(orderDir.toLowerCase())
+        ? orderDir.toUpperCase()
+        : "DESC";
+    // Controlla se è stato fornito un termine di ricerca 
     if (!searchTerm) {
-        return res.status(400).json({ 
+        return res.status(400).json({
             errore: "ParametroMancante",
             numero_errore: 400,
-            descrizione: "Il parametro di ricerca 'q' è obbligatorio." 
+            descrizione: "Il parametro di ricerca 'q' è obbligatorio."
         });
     }
-    
-    // Query per cercare prodotti nel nome, descrizione o brand
-    const searchQuery = `
-        SELECT * FROM products 
-        WHERE name LIKE ? 
-        OR description LIKE ? 
+    // Prepara il termine di ricerca con i caratteri jolly per il LIKE 
+    const searchPattern = `%${searchTerm}%`;
+
+    // Query per il totale
+    const countQuery = `
+        SELECT COUNT(*) AS total
+        FROM products
+        WHERE name LIKE ?
+        OR description LIKE ?
+        OR brand LIKE ?
+    `;
+
+    // Query per cercare prodotti nel nome, descrizione o brand 
+    const dataQuery = `
+        SELECT * FROM products
+        WHERE name LIKE ?
+        OR description LIKE ?
         OR brand LIKE ?
         ORDER BY ${safeOrderBy} ${safeOrderDir}
-        limit ${safeLimit}
+        LIMIT ${safeLimit} OFFSET ${offset}
     `;
-    
-    // Prepara il termine di ricerca con i caratteri jolly per il LIKE
-    const searchPattern = `%${searchTerm}%`;
-    
-    connection.query(searchQuery, [searchPattern, searchPattern, searchPattern], (err, results) => {
-        if (err) {
-            console.error("Errore durante la ricerca:", err);
-            return res.status(500).json({ errore: "Errore del server durante la ricerca", details: err });
+
+    // 1️⃣ COUNT
+    connection.query(
+        countQuery,
+        [searchPattern, searchPattern, searchPattern],
+        (err, countResult) => {
+            if (err) {
+                console.error("Errore COUNT:", err);
+                return res.status(500).json({ errore: "Errore del server" });
+            }
+
+            const totalProducts = countResult[0].total;
+            const totalPages = Math.ceil(totalProducts / safeLimit);
+
+            // 2️⃣ DATI
+            connection.query(
+                dataQuery,
+                [searchPattern, searchPattern, searchPattern],
+                (err, results) => {
+                    if (err) {
+                        console.error("Errore ricerca:", err);
+                        return res.status(500).json({ errore: "Errore del server" });
+                    }
+
+                    if (results.length === 0) {
+                        return res.json({
+                            messaggio: "Nessun prodotto trovato",
+                            termine_ricerca: searchTerm,
+                            total: 0,
+                            risultati: []
+                        });
+                    }
+
+                    const prodottiTrovati = results.map(p => ({
+                        id: p.id,
+                        slug: p.slug,
+                        name: p.name,
+                        description: p.description,
+                        price: p.price,
+                        discount_price: p.discount_price,
+                        image: p.image,
+                        alt_text: p.alt_text,
+                        created_at: p.created_at,
+                        modified_at: p.modified_at,
+                        stocking_unit: p.stocking_unit,
+                        weight_kg: p.weight_kg,
+                        brand: p.brand,
+                        is_active: p.is_active,
+                        color: p.color,
+                        flavor: p.flavor,
+                        size: p.size,
+                        macro_categories_id: p.macro_categories_id,
+                        manufacturer_note: p.manufacturer_note
+                    }));
+
+                    res.json({
+                        messaggio: `Trovati ${totalProducts} prodotti`,
+                        termine_ricerca: searchTerm,
+                        ordine: {
+                            campo: safeOrderBy,
+                            direzione: safeOrderDir
+                        },
+                        paginazione: {
+                            pagina_corrente: safePage,
+                            per_pagina: safeLimit,
+                            totale_risultati: totalProducts,
+                            totale_pagine: totalPages
+                        },
+                        risultati: prodottiTrovati
+                    });
+                }
+            );
         }
-        
-        // Se non ci sono risultati
-        if (results.length === 0) {
-            return res.json({
-                messaggio: "Nessun prodotto trovato",
-                termine_ricerca: searchTerm,
-                risultati: []
-            });
-        }
-        
-        // Mappa i risultati
-        const prodottiTrovati = results.map(p => ({
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            description: p.description,
-            price: p.price,
-            discount_price: p.discount_price,
-            image: p.image,
-            alt_text: p.alt_text,
-            created_at: p.created_at,
-            modified_at: p.modified_at,
-            stocking_unit: p.stocking_unit,
-            weight_kg: p.weight_kg,
-            brand: p.brand,
-            is_active: p.is_active,
-            color: p.color,
-            flavor: p.flavor,
-            size: p.size,
-            macro_categories_id: p.macro_categories_id,
-            manufacturer_note: p.manufacturer_note
-        }));
-        
-        res.json({
-            messaggio: `Trovati ${prodottiTrovati.length} prodotti`,
-            termine_ricerca: searchTerm,
-            ordine:{
-                campo: safeOrderBy,
-                direzione: safeOrderDir
-            },
-            limite: safeLimit,
-            risultati: prodottiTrovati
-        });
-    });
+    );
 }
 
 // Esporta le funzioni del controller
