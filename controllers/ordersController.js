@@ -83,7 +83,7 @@ function store(req, res, next) {
                 let totalWeight = 0;
 
                 connection.query(
-                    `SELECT id, slug, price, weight_kg FROM products WHERE slug IN (?)`,
+                    `SELECT id, slug, discount_price, weight_kg FROM products WHERE slug IN (?)`,
                     [slugs],
                     (err, productsResult) => {
                         if (err) return connection.rollback(() => next(err));
@@ -94,7 +94,7 @@ function store(req, res, next) {
                         for (const item of items) {
                             const product = productMap[item.slug];
                             const amount = item.amount;
-                            const price = product.price;
+                            const price = product.discount_price;
                             const weight = product.weight_kg;
 
                             totalAmount += price * amount;
@@ -129,7 +129,7 @@ function store(req, res, next) {
 
                                     res.status(201).json({
                                         message: "Order created successfully",
-                                        id_ordine: orderNumber
+                                        id_order: orderNumber
                                     })
                                 });
                             })
