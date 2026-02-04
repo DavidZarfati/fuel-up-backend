@@ -253,7 +253,7 @@ function search(req, res, next) {
         LIMIT ${safeLimit} OFFSET ${offset}
     `;
 
-    // 1️⃣ COUNT
+   
     connection.query(
         countQuery,
         [searchPattern, searchPattern, searchPattern],
@@ -266,7 +266,7 @@ function search(req, res, next) {
             const totalProducts = countResult[0].total;
             const totalPages = Math.ceil(totalProducts / safeLimit);
 
-            // 2️⃣ DATI
+            
             connection.query(
                 dataQuery,
                 [searchPattern, searchPattern, searchPattern],
