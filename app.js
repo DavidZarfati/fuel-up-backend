@@ -4,6 +4,7 @@ import cors from "cors"
 import customersRouter from "./routers/customersRouter.js";
 import productsRouter from "./routers/productsRouter.js"
 import categoriesRouter from "./routers/categoriesRouter.js";
+import productsInvoicesRouter from "./routers/productsInvoicesRouter.js";
 import errorHandler from './middlewares/errorHandler.js';
 import notFound from './middlewares/notFound.js';
 
@@ -23,6 +24,7 @@ app.use("/api/products", productsRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/productsInvoices", productsInvoicesRouter);
 
 
 app.use(errorHandler);

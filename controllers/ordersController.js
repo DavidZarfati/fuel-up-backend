@@ -35,6 +35,7 @@ function show(req, res, next) {
 
 function store(req, res, next) {
     const post = req.body;
+    const items = post.items || [];
 
     connection.beginTransaction(err => {
         if (err) return next(err);
@@ -61,82 +62,89 @@ function store(req, res, next) {
         connection.query(customerQuery, customerValues, (err, customerResult) => {
             if (err) return connection.rollback(() => next(err));
 
+            const slugs = items.map(i => i.slug);
 
             const customerId = customerResult.insertId;
+            const orderNumber = `ORD-2026-${customerId + 10000}`
 
             const invoiceQuery = `
-            INSERT INTO invoices (customers_id, delivery_fee, total_amount)
-            VALUES (?, ?, ?)`;
+            INSERT INTO invoices (customers_id, delivery_fee, total_amount, order_number)
+            VALUES (?, ?, ?, ?)`;
 
-            const invoiceValues = [customerId, post.delivery_fee, post.total_amount];
+            //delivery_fee, total_amount are supposed to be updated later
+            const invoiceValues = [customerId, 0, 0, orderNumber];
 
             connection.query(invoiceQuery, invoiceValues, (err, invoiceResult) => {
                 if (err) return connection.rollback(() => next(err));
-
-
                 const invoiceId = invoiceResult.insertId;
-                const orderNumber = `ORD-2026-${invoiceId + 10000}`;
 
-                const updateQuery = `UPDATE invoices SET order_number = ? WHERE id = ?`;
-                connection.query(updateQuery, [orderNumber, invoiceId], (err, updateResult) => {
-                    if (err) return connection.rollback(() => next(err));
+                const itemValues = [];
+                let totalAmount = 0;
+                let totalWeight = 0;
 
-
-                    connection.commit(err => {
+                connection.query(
+                    `SELECT id, slug, price, weight_kg FROM products WHERE slug IN (?)`,
+                    [slugs],
+                    (err, productsResult) => {
                         if (err) return connection.rollback(() => next(err));
 
-                        return res.status(201).json({
-                            message: "Customer and invoice created successfully",
-                            customerId,
-                            invoiceId,
-                            orderNumber
-                        });
-                    });
-                });
+                        const productMap = {};
+                        productsResult.forEach(p => { productMap[p.slug] = p; });
+
+                        for (const item of items) {
+                            const product = productMap[item.slug];
+                            const amount = item.amount;
+                            const price = product.price;
+                            const weight = product.weight_kg;
+
+                            totalAmount += price * amount;
+                            totalWeight += weight * amount;
+
+                            itemValues.push([invoiceId, product.id, amount, price]);
+                        }
+
+                        const insertItemsQuery = `
+                        INSERT INTO products_invoices
+                        (invoice_id, product_id, quantity, price_per_unit)
+                        VALUES ?
+                        `;
+
+                        connection.query(insertItemsQuery, [itemValues], (err, insertResult) => {
+                            if (err) return connection.rollback(() => next(err));
+
+                            const delivery_fee = (totalAmount > 50) ? 0 : 3 + 0.15 * totalWeight;
+                            const updateInvoiceQuery = `
+                            UPDATE invoices
+                            SET
+                            total_amount = ?,
+                            delivery_fee = ?
+                            WHERE id = ?
+                            `
+
+                            connection.query(updateInvoiceQuery, [totalAmount, delivery_fee, invoiceId], (err, updateResult) => {
+                                if (err) return connection.rollback(() => next(err));
+
+                                connection.commit(err => {
+                                    if (err) return connection.rollback(() => next(err));
+
+                                    res.status(201).json({
+                                        message: "Order created successfully",
+                                        id_ordine: orderNumber
+                                    })
+                                });
+                            })
+                        })
+                    }
+                )
             });
         });
     });
 }
-
-/*
-function store(req, res, next) {
-    const post = req.body;
-    console.log(post);
-
-
-    const storeQuery = `
-    INSERT INTO invoices
-    (customers_id, delivery_fee, total_amount)
-    VALUES
-    (?, ?, ?)`;
-
-    const values = [post.customers_id, post.delivery_fee, post.total_amount];
-
-    connection.query(storeQuery, values, (err, result) => {
-        if (err) return next(err);
-
-        const newId = result.insertId;
-        const orderNumber = `ORD-2026-${newId + 10000}`;
-
-        // Aggiorna order_number con l'id appena creato
-        const updateQuery = `UPDATE invoices SET order_number = ? WHERE id = ?`;
-        connection.query(updateQuery, [orderNumber, newId], (err2) => {
-            if (err2) return next(err2);
-
-            return res.status(201).json({
-                message: "Order created successfully",
-                orderId: newId,
-                orderNumber: orderNumber
-            });
-        });
-    });
-}
-*/
 
 const controller = {
-        index,
-        show,
-        store
-    }
+    index,
+    show,
+    store
+}
 
-    export default controller;
+export default controller;

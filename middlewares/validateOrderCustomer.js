@@ -5,14 +5,15 @@ function validateOrderCustomer(req, res, next) {
         return res.status(400).json({ error: "Request body is missing" });
     }
 
-    let { customers_id, delivery_fee, total_amount } = req.body;
     let { name, surname, email, nation, city, postal_code, phone_number, address, street_number, fiscal_code } = req.body;
 
-    if ((!customers_id && customers_id != 0) || (!delivery_fee && delivery_fee != 0) || (!total_amount && total_amount != 0)) {
+    let items = req.body.items;
+
+    if (!items || items.length === 0) {
         return res.status(400).json({
-            error: "Missing required order fields",
-            required: ["customers_id", "delivery_fee", "total_amount"]
-        });
+            error: "No items",
+            required: ["items: [{slug, amount}, ...]"]
+        })
     }
 
     if (!name || !surname || !email || !nation || !city || !postal_code || !phone_number || !address || !street_number || !fiscal_code) {
@@ -57,45 +58,48 @@ function validateOrderCustomer(req, res, next) {
     fiscal_code = fiscal_code.trim();
     const fiscal_code_regex = /^[A-Z0-9]{16}$/
     if (!fiscal_code_regex.test(fiscal_code)) {
-    return res.status(400).json({
-        error: "The fiscal code is not valid",
-        status: 400
+        return res.status(400).json({
+            error: "The fiscal code is not valid",
+            status: 400
+        });
+    }
+
+    //Amount
+    for (let i = 0; i < items.length; i++) {
+        const amount = items[i].amount;
+        if (!Number.isInteger(amount) || amount <= 0) {
+            return res.status(400).json({
+                error: "Amount of items must be a positive number",
+                status: 400
+            });
+        }
+    }
+
+    //Slug
+    const slugs = items.map(item => item.slug);
+
+    const slugQuery = `SELECT * FROM products WHERE slug IN (?)`;
+
+    connection.query(slugQuery, [slugs], (err, slugResults) => {
+        if (err) return next(err);
+
+        const existingSlugs = slugResults.map(row => row.slug);
+        const missingSlugs = slugs.filter(slug => !existingSlugs.includes(slug));
+
+        console.log("Existing slugs\n");
+        console.log(existingSlugs);
+        console.log("\n\nMissing slugs\n");
+        console.log(missingSlugs);
+
+        if (missingSlugs.length > 0) {
+            return res.status(400).json({
+                error: "Some items are invalid",
+                status: 400
+            });
+        }
+
+        next();
     });
-}
-
-    //total_amount
-    if (typeof total_amount !== "number") {
-        return res.status(400).json({
-            error: "total_amount is not a number",
-            status: 400
-        });
-    }
-    else {
-        if (total_amount <= 0 || total_amount > 999999.99) {
-            return res.status(400).json({
-                error: "total_amount is not a valid number",
-                status: 400
-            });
-        }
-    }
-
-    //delivery_fee
-    if (typeof delivery_fee !== "number") {
-        return res.status(400).json({
-            error: "delivery_fee is not a number",
-            status: 400
-        });
-    }
-    else {
-        if (delivery_fee < 0 || delivery_fee > 999999.99) {
-            return res.status(400).json({
-                error: "delivery_fee is not a valid number",
-                status: 400
-            });
-        }
-    }
-
-    next();
 }
 
 export default validateOrderCustomer;
