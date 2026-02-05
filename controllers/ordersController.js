@@ -26,8 +26,8 @@ function extendedIndex(req, res, next) {
     connection.query(extendedIndexQuery, (err, extendedIndexResult) => {
         if (err) return next(err);
 
-        console.log(extendedIndexQuery);
-        console.log(extendedIndexResult);
+        //console.log(extendedIndexQuery);
+        //console.log(extendedIndexResult);
 
         const ordersCustomers = extendedIndexResult.map(oc => ({
             order_number: oc.order_number,
