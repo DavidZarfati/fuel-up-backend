@@ -22,7 +22,7 @@ function indexProductsPage(req, res, next) {
                 name: product.name,
                 description: product.description,
                 price: product.price,
-                discont_price: product.discount_price,
+                discount_price: product.discount_price,
                 image: product.image,
                 alt_text: product.alt_text,
                 created_at: product.created_at,
@@ -71,7 +71,7 @@ function singleProduct(req, res, next) {
             name: product.name,
             description: product.description,
             price: product.price,
-            discont_price: product.discount_price,
+            discount_price: product.discount_price,
             image: product.image,
             alt_text: product.alt_text,
             created_at: product.created_at,
@@ -252,7 +252,7 @@ function search(req, res, next) {
         LIMIT ${safeLimit} OFFSET ${offset}
     `;
 
-   
+
     connection.query(
         countQuery,
         [searchPattern, searchPattern, searchPattern],
@@ -265,7 +265,7 @@ function search(req, res, next) {
             const totalProducts = countResult[0].total;
             const totalPages = Math.ceil(totalProducts / safeLimit);
 
-            
+
             connection.query(
                 dataQuery,
                 [searchPattern, searchPattern, searchPattern],
@@ -328,37 +328,37 @@ function search(req, res, next) {
 
 // Cerca prodotti che condividono più categorie con un prodotto dato
 function searchByCategories(req, res, next) {
-  const slug = req.params.slug;
+    const slug = req.params.slug;
 
-  if (!slug) {
-    return res.status(400).json({
-      errore: "ParametroMancante",
-      descrizione: "Slug prodotto richiesto"
-    });
-  }
+    if (!slug) {
+        return res.status(400).json({
+            errore: "ParametroMancante",
+            descrizione: "Slug prodotto richiesto"
+        });
+    }
 
-  // 1) Trova productId dallo slug
-  const productQuery = `
+    // 1) Trova productId dallo slug
+    const productQuery = `
     SELECT id
     FROM products
     WHERE slug = ?
     LIMIT 1
   `;
 
-  connection.query(productQuery, [slug], (err, productResults) => {
-    if (err) return next(err);
+    connection.query(productQuery, [slug], (err, productResults) => {
+        if (err) return next(err);
 
-    if (!productResults.length) {
-      return res.status(404).json({
-        errore: "ProdottoNonTrovato",
-        descrizione: "Nessun prodotto trovato con questo slug"
-      });
-    }
+        if (!productResults.length) {
+            return res.status(404).json({
+                errore: "ProdottoNonTrovato",
+                descrizione: "Nessun prodotto trovato con questo slug"
+            });
+        }
 
-    const productId = productResults[0].id;
+        const productId = productResults[0].id;
 
-    // 2) Trova prodotti correlati tramite categorie condivise
-    const similarProductsQuery = `
+        // 2) Trova prodotti correlati tramite categorie condivise
+        const similarProductsQuery = `
       SELECT 
         p2.*,
         COUNT(DISTINCT pc2.category_id) AS shared_categories
@@ -374,16 +374,16 @@ function searchByCategories(req, res, next) {
       ORDER BY shared_categories DESC, p2.name ASC
     `;
 
-    connection.query(similarProductsQuery, [productId], (err, results) => {
-      if (err) return next(err);
+        connection.query(similarProductsQuery, [productId], (err, results) => {
+            if (err) return next(err);
 
-      res.json({
-        prodotto_base: slug,
-        totale: results.length,
-        risultati: results
-      });
+            res.json({
+                prodotto_base: slug,
+                totale: results.length,
+                risultati: results
+            });
+        });
     });
-  });
 }
 
 
