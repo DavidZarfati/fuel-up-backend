@@ -10,7 +10,6 @@ function index(req, res, next) {
         }
 
         const clientiOrdinati = result.map(c => ({
-            id: c.id,
             name: c.name,
             surname: c.surname,
             email: c.email,
@@ -20,8 +19,6 @@ function index(req, res, next) {
             phone_number: c.phone_number,
             address: c.address,
             street_number: c.street_number,
-            created_at: c.created_at,
-            modified_at: c.modified_at,
             fiscal_code: c.fiscal_code
         }));
         res.json(clientiOrdinati);
@@ -43,7 +40,6 @@ function show(req, res, next) {
             });
         }
         const cliente = {
-            id: results[0].id,
             name: results[0].name,
             surname: results[0].surname,
             email: results[0].email,
@@ -53,8 +49,6 @@ function show(req, res, next) {
             phone_number: results[0].phone_number,
             address: results[0].address,
             street_number: results[0].street_number,
-            created_at: results[0].created_at,
-            modified_at: results[0].modified_at,
             fiscal_code: results[0].fiscal_code
         }
         res.json(cliente);

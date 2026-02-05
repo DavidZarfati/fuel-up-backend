@@ -86,10 +86,12 @@ function validateOrderCustomer(req, res, next) {
         const existingSlugs = slugResults.map(row => row.slug);
         const missingSlugs = slugs.filter(slug => !existingSlugs.includes(slug));
 
+        /*
         console.log("Existing slugs\n");
         console.log(existingSlugs);
         console.log("\n\nMissing slugs\n");
         console.log(missingSlugs);
+        */
 
         if (missingSlugs.length > 0) {
             return res.status(400).json({

@@ -6,9 +6,14 @@ function index(req, res, next) {
     connection.query(indexQuery, (err, indexResult) => {
         if (err) return next(err);
 
-        return res.status(200).json({
-            results: indexResult
-        });
+        const orders = indexResult.map(o => ({
+            customerId: o.customers_id,
+            order_number: o.order_number,
+            delivery_fee: o.delivery_fee,
+            total_amount: o.total_amount
+        }));
+
+        res.status(200).json(orders);
     });
 }
 
@@ -27,9 +32,14 @@ function show(req, res, next) {
             return res.status(404).json({ message: "Order not found", status: 404 });
         }
 
-        return res.status(200).json({
-            result: showResult
-        });
+        const order = showResult.map(o => ({
+            customerId: o.customers_id,
+            order_number: o.order_number,
+            delivery_fee: o.delivery_fee,
+            total_amount: o.total_amount
+        }));
+
+        res.status(200).json(order);
     });
 }
 
