@@ -74,6 +74,7 @@ function show(req, res, next) {
     });
 }
 
+/*
 function extendedShow(req, res, next) {
     const {id} = req.params;
 
@@ -109,6 +110,80 @@ function extendedShow(req, res, next) {
 
         res.status(200).json(orderCustomer);
     })
+}
+*/
+
+function extendedShow(req, res, next) {
+    const { id } = req.params;
+
+    const extendedShowQuery = `
+    SELECT
+        i.id AS invoice_id,
+        i.order_number,
+        i.delivery_fee,
+        i.total_amount,
+        c.id AS customer_id,
+        c.name AS customer_name,
+        c.surname AS customer_surname,
+        c.email AS customer_email,
+        c.nation AS customer_nation,
+        c.city AS customer_city,
+        c.postal_code AS customer_postal_code,
+        c.phone_number AS customer_phone_number,
+        c.address AS customer_address,
+        c.street_number AS customer_street_number,
+        c.fiscal_code AS customer_fiscal_code,
+        p.name AS product_name,
+        pi.quantity AS product_quantity,
+        pi.price_per_unit AS product_price
+    FROM invoices i
+    LEFT JOIN customers c ON i.customers_id = c.id
+    LEFT JOIN products_invoices pi ON pi.invoice_id = i.id
+    LEFT JOIN products p ON pi.product_id = p.id
+    WHERE i.id = ?;
+    `;
+
+    connection.query(extendedShowQuery, [id], (err, results) => {
+        if (err) return next(err);
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: "Order not found", status: 404 });
+        }
+
+        // Prepare single invoice object
+        const order = {
+            order_number: results[0].order_number,
+            delivery_fee: results[0].delivery_fee,
+            total_amount: results[0].total_amount,
+            customer: {
+                id: results[0].customer_id,
+                name: results[0].customer_name,
+                surname: results[0].customer_surname,
+                email: results[0].customer_email,
+                nation: results[0].customer_nation,
+                city: results[0].customer_city,
+                postal_code: results[0].customer_postal_code,
+                phone_number: results[0].customer_phone_number,
+                address: results[0].customer_address,
+                street_number: results[0].customer_street_number,
+                fiscal_code: results[0].customer_fiscal_code
+            },
+            items: []
+        };
+
+        // Collect all products
+        results.forEach(row => {
+            if (row.product_name) {
+                order.items.push({
+                    product_name: row.product_name,
+                    amount: row.product_quantity,
+                    price: row.product_price
+                });
+            }
+        });
+
+        res.status(200).json(order);
+    });
 }
 
 function store(req, res, next) {
