@@ -10,7 +10,7 @@ import notFound from './middlewares/notFound.js';
 
 
 const app = express();
-const port = process.env.SERVER_PORT;
+const port = process.env.PORT;
 
 app.use(cors({
     origin: process.env.FRONTEND_URL_ORIGIN
