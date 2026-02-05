@@ -16,11 +16,84 @@ function validateOrderCustomer(req, res, next) {
         })
     }
 
-    if (!name || !surname || !email || !nation || !city || !postal_code || !phone_number || !address || !street_number || !fiscal_code) {
+    if(!name)
+    {
         return res.status(400).json({
-            error: "Missing required customer fields",
-            required: ["name", "surname", "email", "nation", "city", "postal_code", "phone_number", "address", "street_number", "fiscal_code"]
-        });
+            error: "Missing required name field",
+            status: 400 
+        })
+    }
+
+    if(!surname)
+    {
+        return res.status(400).json({
+            error: "Missing required surname field",
+            status: 400 
+        })
+    }
+
+    if(!email)
+    {
+        return res.status(400).json({
+            error: "Missing required email field",
+            status: 400 
+        })
+    }
+
+    if(!nation)
+    {
+        return res.status(400).json({
+            error: "Missing required nation field",
+            status: 400 
+        })
+    }
+
+    if(!city)
+    {
+        return res.status(400).json({
+            error: "Missing required city field",
+            status: 400 
+        })
+    }
+
+    if(!postal_code)
+    {
+        return res.status(400).json({
+            error: "Missing required postal_code field",
+            status: 400 
+        })
+    }
+
+    if(!phone_number)
+    {
+        return res.status(400).json({
+            error: "Missing required phone_number field",
+            status: 400 
+        })
+    }
+
+    if(!address)
+    {
+        return res.status(400).json({
+            error: "Missing required address field",
+            status: 400 
+        })
+    }
+
+    if(!street_number)
+    {
+        return res.status(400).json({
+            error: "Missing required street_number field",
+            status: 400 
+        })
+    }
+
+    if(!fiscal_code)
+    {
+        return res.status(400).json({
+            error: "Missing required fiscal_code field",
+            status: 400 
+        })
     }
 
     //email
@@ -56,7 +129,7 @@ function validateOrderCustomer(req, res, next) {
 
     //fiscal_code
     fiscal_code = fiscal_code.trim();
-    const fiscal_code_regex = /^[A-Z0-9]{16}$/
+    const fiscal_code_regex =  /^[A-Z]{6}[0-9]{2}[A-Z]{1}[0-9]{2}[A-Z]{1}[0-9]{3}[A-Z]{1}$/; ///^[A-Z0-9]{16}$/
     if (!fiscal_code_regex.test(fiscal_code)) {
         return res.status(400).json({
             error: "The fiscal code is not valid",
@@ -86,10 +159,12 @@ function validateOrderCustomer(req, res, next) {
         const existingSlugs = slugResults.map(row => row.slug);
         const missingSlugs = slugs.filter(slug => !existingSlugs.includes(slug));
 
+        /*
         console.log("Existing slugs\n");
         console.log(existingSlugs);
         console.log("\n\nMissing slugs\n");
         console.log(missingSlugs);
+        */
 
         if (missingSlugs.length > 0) {
             return res.status(400).json({

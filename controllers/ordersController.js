@@ -6,9 +6,46 @@ function index(req, res, next) {
     connection.query(indexQuery, (err, indexResult) => {
         if (err) return next(err);
 
-        return res.status(200).json({
-            results: indexResult
-        });
+        const orders = indexResult.map(o => ({
+            order_number: o.order_number,
+            delivery_fee: o.delivery_fee,
+            total_amount: o.total_amount
+        }));
+
+        res.status(200).json(orders);
+    });
+}
+
+function extendedIndex(req, res, next) {
+    const extendedIndexQuery = `
+    SELECT *
+    FROM invoices
+    LEFT JOIN customers
+    ON invoices.customers_id = customers.id`;
+
+    connection.query(extendedIndexQuery, (err, extendedIndexResult) => {
+        if (err) return next(err);
+
+        console.log(extendedIndexQuery);
+        console.log(extendedIndexResult);
+
+        const ordersCustomers = extendedIndexResult.map(oc => ({
+            order_number: oc.order_number,
+            delivery_fee: oc.delivery_fee,
+            total_amount: oc.total_amount,
+            name: oc.name,
+            surname: oc.surname,
+            email: oc.email,
+            nation: oc.nation,
+            city: oc.city,
+            postal_code: oc.postal_code,
+            phone_number: oc.phone_number,
+            address: oc.address,
+            street_number: oc.street_number,
+            fiscal_code: oc.fiscal_code,
+        }));
+
+        res.status(200).json(ordersCustomers);
     });
 }
 
@@ -27,9 +64,125 @@ function show(req, res, next) {
             return res.status(404).json({ message: "Order not found", status: 404 });
         }
 
-        return res.status(200).json({
-            result: showResult
+        const order = showResult.map(o => ({
+            order_number: o.order_number,
+            delivery_fee: o.delivery_fee,
+            total_amount: o.total_amount
+        }));
+
+        res.status(200).json(order);
+    });
+}
+
+/*
+function extendedShow(req, res, next) {
+    const {id} = req.params;
+
+    const extendedShowQuery = `
+    SELECT *
+    FROM invoices
+    JOIN customers
+    ON customers.id = invoices.id
+    WHERE invoices.id = ?`;
+
+    connection.query(extendedShowQuery, [id], (err, extendedShowResult) => {
+        if(err) return next(err);
+        
+        if (extendedShowResult.length === 0) {
+            return res.status(404).json({ message: "Order not found", status: 404 });
+        }
+
+        const orderCustomer = extendedShowResult.map(oc => ({
+            name: oc.name,
+            surname: oc.surname,
+            email: oc.email,
+            nation: oc.nation,
+            city: oc.city,
+            postal_code: oc.postal_code,
+            phone_number: oc.phone_number,
+            address: oc.address,
+            street_number: oc.street_number,
+            fiscal_code: oc.fiscal_code,
+            order_number: oc.order_number,
+            delivery_fee: oc.delivery_fee,
+            total_amount: oc.total_amount
+        }));
+
+        res.status(200).json(orderCustomer);
+    })
+}
+*/
+
+function extendedShow(req, res, next) {
+    const { id } = req.params;
+
+    const extendedShowQuery = `
+    SELECT
+        i.id AS invoice_id,
+        i.order_number,
+        i.delivery_fee,
+        i.total_amount,
+        c.id AS customer_id,
+        c.name AS customer_name,
+        c.surname AS customer_surname,
+        c.email AS customer_email,
+        c.nation AS customer_nation,
+        c.city AS customer_city,
+        c.postal_code AS customer_postal_code,
+        c.phone_number AS customer_phone_number,
+        c.address AS customer_address,
+        c.street_number AS customer_street_number,
+        c.fiscal_code AS customer_fiscal_code,
+        p.name AS product_name,
+        pi.quantity AS product_quantity,
+        pi.price_per_unit AS product_price
+    FROM invoices i
+    LEFT JOIN customers c ON i.customers_id = c.id
+    LEFT JOIN products_invoices pi ON pi.invoice_id = i.id
+    LEFT JOIN products p ON pi.product_id = p.id
+    WHERE i.id = ?;
+    `;
+
+    connection.query(extendedShowQuery, [id], (err, results) => {
+        if (err) return next(err);
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: "Order not found", status: 404 });
+        }
+
+        // Prepare single invoice object
+        const order = {
+            order_number: results[0].order_number,
+            delivery_fee: results[0].delivery_fee,
+            total_amount: results[0].total_amount,
+            customer: {
+                id: results[0].customer_id,
+                name: results[0].customer_name,
+                surname: results[0].customer_surname,
+                email: results[0].customer_email,
+                nation: results[0].customer_nation,
+                city: results[0].customer_city,
+                postal_code: results[0].customer_postal_code,
+                phone_number: results[0].customer_phone_number,
+                address: results[0].customer_address,
+                street_number: results[0].customer_street_number,
+                fiscal_code: results[0].customer_fiscal_code
+            },
+            items: []
+        };
+
+        // Collect all products
+        results.forEach(row => {
+            if (row.product_name) {
+                order.items.push({
+                    product_name: row.product_name,
+                    amount: row.product_quantity,
+                    price: row.product_price
+                });
+            }
         });
+
+        res.status(200).json(order);
     });
 }
 
@@ -89,6 +242,7 @@ function store(req, res, next) {
                         if (err) return connection.rollback(() => next(err));
 
                         const productMap = {};
+                        const itemList = [];
                         productsResult.forEach(p => { productMap[p.slug] = p; });
 
                         for (const item of items) {
@@ -101,7 +255,10 @@ function store(req, res, next) {
                             totalWeight += weight * amount;
 
                             itemValues.push([invoiceId, product.id, amount, price]);
+                            itemList.push({slug: product.slug, amount: amount, price: price});
                         }
+
+                        //console.log(itemList);
 
                         const insertItemsQuery = `
                         INSERT INTO products_invoices
@@ -112,7 +269,7 @@ function store(req, res, next) {
                         connection.query(insertItemsQuery, [itemValues], (err, insertResult) => {
                             if (err) return connection.rollback(() => next(err));
 
-                            const delivery_fee = (totalAmount > 50) ? 0 : 3 + 0.15 * totalWeight;
+                            const delivery_fee = (totalAmount > 100) ? 0 : 3 + 0.15 * totalWeight;
                             const updateInvoiceQuery = `
                             UPDATE invoices
                             SET
@@ -129,7 +286,10 @@ function store(req, res, next) {
 
                                     res.status(201).json({
                                         message: "Order created successfully",
-                                        id_order: orderNumber
+                                        order_number: orderNumber,
+                                        total_cost: totalAmount,
+                                        delivery_fee: delivery_fee,
+                                        items: itemList
                                     })
                                 });
                             })
@@ -143,7 +303,9 @@ function store(req, res, next) {
 
 const controller = {
     index,
+    extendedIndex,
     show,
+    extendedShow,
     store
 }
 
