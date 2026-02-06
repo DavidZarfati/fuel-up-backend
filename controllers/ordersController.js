@@ -1,38 +1,34 @@
+
 import { text } from "express";
 import connection from "../database/db.js";
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 
 let transporter = nodemailer.createTransport({
     service: "gmail",
-    host: "zarda2001@gmail.com",
+    host: "smtp.gmail.com",
     port: 587,
     secure: false,
     auth: {
         user: process.env.USER,
-        pass: proces.env.APP_PASSWORD,
-    }
-})
-const mailOptions = {
-    from: {
-        name: "FuelUp",
-        address: process.env.USER,
+        pass: process.env.APP_PASSWORD,
     },
-    to: "bar@example.com, baz@example.com",
-    subject: "Test Mail Sender",
-    text: "Ciao, se ricevi questa mail, hai comprato su FuelUp"
-}
-const sendMail = async (transpoter, mailOptions) => {
-    try {
-        await transporter.sendMail()
-        console.log("e-mail has been sent");
-
-    } catch (error) {
-        console.error(error)
+    tls: {
+        rejectUnauthorized: false
     }
-}
+});
 
-sendMail(transporter, mailOptions);
+const sendMail = async (transporter, mailOptions) => {
+    try {
+        console.log("[DEBUG] Invio mail con mailOptions:", mailOptions);
+        const info = await transporter.sendMail(mailOptions);
+        console.log("[DEBUG] Risultato sendMail:", info);
+        console.log("e-mail has been sent");
+    } catch (error) {
+        console.error("[DEBUG] Errore invio mail:", error);
+    }
+};
 
 
 
@@ -326,8 +322,20 @@ function store(req, res, next) {
                                         total_cost: totalAmount,
                                         delivery_fee: delivery_fee,
                                         items: itemList
-                                    })
+                                    });
 
+                                    // Invia la mail di conferma ordine
+                                    console.log("[DEBUG] post.email:", post.email);
+                                    const mailOptions = {
+                                        from: {
+                                            name: "FuelUp",
+                                            address: process.env.USER,
+                                        },
+                                        to: post.email, // email del cliente
+                                        subject: "Conferma ordine FuelUp",
+                                        text: `Grazie per il tuo ordine! Numero ordine: ${orderNumber}`
+                                    };
+                                    sendMail(transporter, mailOptions);
                                 });
                             })
                         })
