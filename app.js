@@ -1,4 +1,4 @@
-import "dotenv"
+import "dotenv/config"
 import express from 'express';
 import ordersRouter from "./routers/ordersRouter.js";
 import cors from "cors"
