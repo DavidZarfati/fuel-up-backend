@@ -324,7 +324,7 @@ function store(req, res, next) {
                                         items: itemList
                                     });
 
-                                    // Invia la mail di conferma ordine
+                                    // Invia la mail di conferma ordine al cliente
                                     console.log("[DEBUG] post.email:", post.email);
                                     const mailOptions = {
                                         from: {
@@ -336,6 +336,21 @@ function store(req, res, next) {
                                         text: `Grazie per il tuo ordine! Numero ordine: ${orderNumber}`
                                     };
                                     sendMail(transporter, mailOptions);
+
+                                    // Invia la mail al venditore
+                                    const sellerEmail = "zarda2001@gmail.com";
+                                    // Crea un riepilogo dei prodotti venduti
+                                    const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price})`).join("\n");
+                                    const mailOptionsSeller = {
+                                        from: {
+                                            name: "FuelUp",
+                                            address: process.env.USER,
+                                        },
+                                        to: sellerEmail,
+                                        subject: `Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!`,
+                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}`
+                                    };
+                                    sendMail(transporter, mailOptionsSeller);
                                 });
                             })
                         })
