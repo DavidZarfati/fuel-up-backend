@@ -71,7 +71,7 @@ function singleProduct(req, res, next) {
             name: product.name,
             description: product.description,
             price: product.price,
-            discont_price: product.discount_price,
+            discount_price: product.discount_price,
             image: product.image,
             alt_text: product.alt_text,
             created_at: product.created_at,
