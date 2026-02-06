@@ -1,4 +1,7 @@
+import dotenv from 'dotenv';
 import mysql from "mysql2"
+
+dotenv.config();
 
 const connection = mysql.createConnection({
     host: process.env.DB_HOST,
