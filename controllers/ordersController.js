@@ -1,4 +1,40 @@
+import { text } from "express";
 import connection from "../database/db.js";
+const nodemailer = require("nodemailer");
+require("dotenv").config();
+
+let transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "zarda2001@gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.USER,
+        pass: proces.env.APP_PASSWORD,
+    }
+})
+const mailOptions = {
+    from: {
+        name: "FuelUp",
+        address: process.env.USER,
+    },
+    to: "bar@example.com, baz@example.com",
+    subject: "Test Mail Sender",
+    text: "Ciao, se ricevi questa mail, hai comprato su FuelUp"
+}
+const sendMail = async (transpoter, mailOptions) => {
+    try {
+        await transporter.sendMail()
+        console.log("e-mail has been sent");
+
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+sendMail(transporter, mailOptions);
+
+
 
 function index(req, res, next) {
     const indexQuery = "SELECT * FROM invoices";
@@ -255,7 +291,7 @@ function store(req, res, next) {
                             totalWeight += weight * amount;
 
                             itemValues.push([invoiceId, product.id, amount, price]);
-                            itemList.push({slug: product.slug, amount: amount, price: price});
+                            itemList.push({ slug: product.slug, amount: amount, price: price });
                         }
 
                         //console.log(itemList);
@@ -291,6 +327,7 @@ function store(req, res, next) {
                                         delivery_fee: delivery_fee,
                                         items: itemList
                                     })
+
                                 });
                             })
                         })
