@@ -1,4 +1,36 @@
+
+import { text } from "express";
 import connection from "../database/db.js";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
+
+let transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.USER,
+        pass: process.env.APP_PASSWORD,
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+const sendMail = async (transporter, mailOptions) => {
+    try {
+        console.log("[DEBUG] Invio mail con mailOptions:", mailOptions);
+        const info = await transporter.sendMail(mailOptions);
+        console.log("[DEBUG] Risultato sendMail:", info);
+        console.log("e-mail has been sent");
+    } catch (error) {
+        console.error("[DEBUG] Errore invio mail:", error);
+    }
+};
+
+
 
 function index(req, res, next) {
     const indexQuery = "SELECT * FROM invoices";
@@ -255,7 +287,7 @@ function store(req, res, next) {
                             totalWeight += weight * amount;
 
                             itemValues.push([invoiceId, product.id, amount, price]);
-                            itemList.push({slug: product.slug, amount: amount, price: price});
+                            itemList.push({ slug: product.slug, amount: amount, price: price });
                         }
 
                         //console.log(itemList);
@@ -290,7 +322,20 @@ function store(req, res, next) {
                                         total_cost: totalAmount,
                                         delivery_fee: delivery_fee,
                                         items: itemList
-                                    })
+                                    });
+
+                                    // Invia la mail di conferma ordine
+                                    console.log("[DEBUG] post.email:", post.email);
+                                    const mailOptions = {
+                                        from: {
+                                            name: "FuelUp",
+                                            address: process.env.USER,
+                                        },
+                                        to: post.email, // email del cliente
+                                        subject: "Conferma ordine FuelUp",
+                                        text: `Grazie per il tuo ordine! Numero ordine: ${orderNumber}`
+                                    };
+                                    sendMail(transporter, mailOptions);
                                 });
                             })
                         })
