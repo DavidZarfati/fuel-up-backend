@@ -10,16 +10,15 @@ import notFound from './middlewares/notFound.js';
 
 
 const app = express();
-app.use(express.json());
-
 const port = process.env.PORT;
 
 app.use(cors({
     origin: process.env.FRONTEND_URL_ORIGIN
 }));
-app.use(express.static("public"));
 
 app.use(express.json());
+app.use(express.static("public"));
+
 app.use("/api/products", productsRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/categories", categoriesRouter);

@@ -156,7 +156,6 @@ function show(req, res, next) {
 
                 // Costruisci l'oggetto prodotto completo
                 const prodotto = {
-                    id: productData.id,
                     slug: productData.slug,
                     name: productData.name,
                     description: productData.description,
@@ -286,7 +285,6 @@ function search(req, res, next) {
                     }
 
                     const prodottiTrovati = results.map(p => ({
-                        id: p.id,
                         slug: p.slug,
                         name: p.name,
                         description: p.description,
@@ -330,79 +328,65 @@ function search(req, res, next) {
 
 // Cerca prodotti che condividono più categorie con un prodotto dato
 function searchByCategories(req, res, next) {
-    // Puoi passare l'id o lo slug del prodotto come parametro
-    const productId = req.params.id;
-    if (!productId) {
-        return res.status(400).json({ errore: "ParametroMancante", descrizione: "ID prodotto richiesto" });
+  const slug = req.params.slug;
+
+  if (!slug) {
+    return res.status(400).json({
+      errore: "ParametroMancante",
+      descrizione: "Slug prodotto richiesto"
+    });
+  }
+
+  // 1) Trova productId dallo slug
+  const productQuery = `
+    SELECT id
+    FROM products
+    WHERE slug = ?
+    LIMIT 1
+  `;
+
+  connection.query(productQuery, [slug], (err, productResults) => {
+    if (err) return next(err);
+
+    if (!productResults.length) {
+      return res.status(404).json({
+        errore: "ProdottoNonTrovato",
+        descrizione: "Nessun prodotto trovato con questo slug"
+      });
     }
 
-    // 1. Trova le categorie del prodotto di partenza
-    const categoriesQuery = `
-        SELECT category_id
-        FROM products_categories
-        WHERE product_id = ?
+    const productId = productResults[0].id;
+
+    // 2) Trova prodotti correlati tramite categorie condivise
+    const similarProductsQuery = `
+      SELECT 
+        p2.*,
+        COUNT(DISTINCT pc2.category_id) AS shared_categories
+      FROM products_categories pc1
+      JOIN products_categories pc2
+        ON pc2.category_id = pc1.category_id
+       AND pc2.product_id <> pc1.product_id
+      JOIN products p2
+        ON p2.id = pc2.product_id
+      WHERE pc1.product_id = ?
+        AND p2.is_active = 1
+      GROUP BY p2.id
+      ORDER BY shared_categories DESC, p2.name ASC
     `;
 
-    connection.query(categoriesQuery, [productId], (err, catResults) => {
-        if (err) return next(err);
-        if (!catResults.length) {
-            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
-        }
-        const categoryIds = catResults.map(r => r.category_id);
-        if (!categoryIds.length) {
-            return res.status(404).json({ errore: "NessunaCategoria", descrizione: "Il prodotto non ha categorie associate" });
-        }
+    connection.query(similarProductsQuery, [productId], (err, results) => {
+      if (err) return next(err);
 
-        // 2. Trova altri prodotti che condividono almeno una categoria
-        // Conta quante categorie in comune per ogni prodotto
-        const placeholders = categoryIds.map(() => '?').join(',');
-        const similarProductsQuery = `
-            SELECT 
-                pc.product_id,
-                COUNT(*) AS shared_categories,
-                p.*
-            FROM products_categories pc
-            INNER JOIN products p ON p.id = pc.product_id
-            WHERE pc.category_id IN (${placeholders})
-              AND pc.product_id != ?
-            GROUP BY pc.product_id
-            ORDER BY shared_categories DESC, p.name ASC
-        `;
-        const params = [...categoryIds, productId];
-        connection.query(similarProductsQuery, params, (err, results) => {
-            if (err) return next(err);
-
-            const prodotti = results.map(p => ({
-                id: p.id,
-                slug: p.slug,
-                name: p.name,
-                description: p.description,
-                price: p.price,
-                discount_price: p.discount_price,
-                image: p.image,
-                alt_text: p.alt_text,
-                created_at: p.created_at,
-                modified_at: p.modified_at,
-                stocking_unit: p.stocking_unit,
-                weight_kg: p.weight_kg,
-                brand: p.brand,
-                is_active: p.is_active,
-                color: p.color,
-                flavor: p.flavor,
-                size: p.size,
-                macro_categories_id: p.macro_categories_id,
-                manufacturer_note: p.manufacturer_note,
-                shared_categories: p.shared_categories
-            }));
-
-            res.json({
-                prodotto_base: productId,
-                categorie_condivise: categoryIds.length,
-                risultati: prodotti
-            });
-        });
+      res.json({
+        prodotto_base: slug,
+        totale: results.length,
+        risultati: results
+      });
     });
+  });
 }
+
+
 
 const controller = {
     index: indexProductsPage,
