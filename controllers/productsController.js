@@ -2,12 +2,12 @@ import connection from "../database/db.js";
 
 // Funzione per ottenere tutti i prodotti
 function indexProductsPage(req, res, next) {
-    const page = req.query.page ? parseInt(req.query.page) : 1
-    const itemsforpage = 12;
-    const offset = (page - 1) * itemsforpage
+    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const limit = req.query.limit ? Math.min(parseInt(req.query.limit), 100) : 12;
+    const offset = (page - 1) * limit;
 
     const query = `select * from products limit ? offset ? `;
-    connection.query(query, [itemsforpage, offset], (err, result) => {
+    connection.query(query, [limit, offset], (err, result) => {
         if (err) return next(err);
 
         const queryTotal = `select count(id) as total from products`;
@@ -42,7 +42,7 @@ function indexProductsPage(req, res, next) {
             return res.json({
                 info: {
                     total: totalProducts,
-                    pages: Math.ceil(totalProducts / itemsforpage),
+                    pages: Math.ceil(totalProducts / limit),
                     currentPage: page,
                 },
                 result: productsList
