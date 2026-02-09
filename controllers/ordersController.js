@@ -325,6 +325,7 @@ function store(req, res, next) {
                                     });
 
                                     // Invia la mail di conferma ordine al cliente
+                                    const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price} x ${item.amount})`).join("\n");
                                     console.log("[DEBUG] post.email:", post.email);
                                     const mailOptions = {
                                         from: {
@@ -333,14 +334,16 @@ function store(req, res, next) {
                                         },
                                         to: post.email, // email del cliente
                                         subject: "Conferma ordine FuelUp",
-                                        text: `Grazie per il tuo ordine! Numero ordine: ${orderNumber}`
+                                        text: `Grazie per il tuo ordine! Il Numero del tuo ordine è: ${orderNumber}
+${totalAmount + delivery_fee} € è la somma che ti è stata addebitata sulla carta con la quale hai pagato
+${soldSummary} 
+sono i prodotti che hai acquistato, ti aspettiamo presto di nuovo qui in FuelUp`
                                     };
                                     sendMail(transporter, mailOptions);
 
                                     // Invia la mail al venditore
                                     const sellerEmail = process.env.EMAIL_USER;
                                     // Crea un riepilogo dei prodotti venduti
-                                    const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price})`).join("\n");
                                     const mailOptionsSeller = {
                                         from: {
                                             name: "FuelUp",
