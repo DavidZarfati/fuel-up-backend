@@ -351,7 +351,7 @@ sono i prodotti che hai acquistato, ti aspettiamo presto di nuovo qui in FuelUp`
                                         },
                                         to: sellerEmail,
                                         subject: `Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!`,
-                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}`
+                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}\n\nEmail cliente: ${post.email}\nIndirizzo: ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}`
                                     };
                                     sendMail(transporter, mailOptionsSeller);
                                 });
