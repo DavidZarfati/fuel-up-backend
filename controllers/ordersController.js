@@ -338,11 +338,7 @@ function store(req, res, next) {
                                     sendMail(transporter, mailOptions);
 
                                     // Invia la mail al venditore
-<<<<<<< HEAD
-                                    const sellerEmail = process.env.USER;
-=======
                                     const sellerEmail = process.env.EMAIL_USER;
->>>>>>> 044ec991cf399bbe8729b67595cdaf9ed6f29d44
                                     // Crea un riepilogo dei prodotti venduti
                                     const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price})`).join("\n");
                                     const mailOptionsSeller = {
