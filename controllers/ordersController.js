@@ -325,6 +325,7 @@ function store(req, res, next) {
                                     });
 
                                     // Invia la mail di conferma ordine al cliente
+                                    const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price} x ${item.amount})`).join("\n");
                                     console.log("[DEBUG] post.email:", post.email);
                                     const mailOptions = {
                                         from: {
@@ -333,14 +334,16 @@ function store(req, res, next) {
                                         },
                                         to: post.email, // email del cliente
                                         subject: "Conferma ordine FuelUp",
-                                        text: `Grazie per il tuo ordine! Numero ordine: ${orderNumber}`
+                                        text: `Grazie per il tuo ordine! Il Numero del tuo ordine è: ${orderNumber}
+${totalAmount + delivery_fee} € è la somma che ti è stata addebitata sulla carta con la quale hai pagato
+${soldSummary} 
+sono i prodotti che hai acquistato, ti aspettiamo presto di nuovo qui in FuelUp`
                                     };
                                     sendMail(transporter, mailOptions);
 
                                     // Invia la mail al venditore
                                     const sellerEmail = process.env.EMAIL_USER;
                                     // Crea un riepilogo dei prodotti venduti
-                                    const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price})`).join("\n");
                                     const mailOptionsSeller = {
                                         from: {
                                             name: "FuelUp",
@@ -348,7 +351,7 @@ function store(req, res, next) {
                                         },
                                         to: sellerEmail,
                                         subject: `Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!`,
-                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}`
+                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}\n\nEmail cliente: ${post.email}\nIndirizzo: ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}`
                                     };
                                     sendMail(transporter, mailOptionsSeller);
                                 });
