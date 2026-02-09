@@ -338,7 +338,7 @@ function store(req, res, next) {
                                     sendMail(transporter, mailOptions);
 
                                     // Invia la mail al venditore
-                                    const sellerEmail = "zarda2001@gmail.com";
+                                    const sellerEmail = process.env.USER;
                                     // Crea un riepilogo dei prodotti venduti
                                     const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price})`).join("\n");
                                     const mailOptionsSeller = {
