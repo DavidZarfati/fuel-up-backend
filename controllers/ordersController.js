@@ -327,6 +327,56 @@ function store(req, res, next) {
                                     // Invia la mail di conferma ordine al cliente
                                     const soldSummary = itemList.map(item => `- ${item.amount} x ${item.slug} (prezzo: ${item.price} x ${item.amount})`).join("\n");
                                     console.log("[DEBUG] post.email:", post.email);
+                                    // Costruzione HTML email
+                                    const htmlItems = itemList.map(item => `
+                                        <tr>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;">🍃 ${item.slug}</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} 🛒</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#28a745;font-weight:bold;">${item.price} €</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ff9800;font-weight:bold;">${(item.price * item.amount).toFixed(2)} €</td>
+                                        </tr>
+                                    `).join("");
+
+                                    const htmlMail = `
+                                    <div style="font-family:Arial,sans-serif;background:linear-gradient(135deg,#f7f7f7 60%,#e3f2fd 100%);padding:30px;">
+                                        <div style="max-width:600px;margin:auto;background:#fff;border-radius:16px;box-shadow:0 4px 16px #b3e5fc;padding:32px;border:2px solid #90caf9;">
+                                            <h2 style="color:#1976d2;text-align:center;margin-bottom:24px;font-size:2em;">🎉 Grazie per il tuo ordine! 🎉</h2>
+                                            <p style="font-size:20px;color:#333;text-align:center;margin-bottom:16px;">Il Numero del tuo ordine è:<br><b style="color:#ff9800;font-size:1.3em">${orderNumber}</b></p>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🛍️ Riepilogo prodotti acquistati</h3>
+                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#e3f2fd;border-radius:8px;overflow:hidden;">
+                                                <thead>
+                                                    <tr style="background:#90caf9;">
+                                                        <th style="padding:8px;text-align:left;color:#1976d2;">Prodotto</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Quantità</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Prezzo unitario</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Totale</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${htmlItems}
+                                                </tbody>
+                                            </table>
+                                            <div style="font-size:18px;color:#333;margin-bottom:16px;background:#fffde7;padding:16px;border-radius:8px;border:1px solid #ffe082;">
+                                                <b>Totale prodotti:</b> <span style="color:#388e3c;font-weight:bold;">${totalAmount.toFixed(2)} €</span> <br>
+                                                <b>Spese di spedizione:</b> <span style="color:#1976d2;font-weight:bold;">${delivery_fee.toFixed(2)} €</span> <br>
+                                                <b>Totale addebitato:</b> <span style="color:#ff9800;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} €</span>
+                                            </div>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🚚 Dati spedizione</h3>
+                                            <div style="font-size:17px;color:#333;margin-bottom:16px;background:#e3f2fd;padding:16px;border-radius:8px;border:1px solid #90caf9;">
+                                                <b>👤 Nome:</b> ${post.name} ${post.surname}<br>
+                                                <b>📧 Email:</b> ${post.email}<br>
+                                                <b>📞 Telefono:</b> ${post.phone_number}<br>
+                                                <b>🏠 Indirizzo:</b> ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}<br>
+                                                <b>🆔 Codice fiscale:</b> ${post.fiscal_code}
+                                            </div>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <p style="font-size:18px;color:#333;text-align:center;margin-top:24px;">✨ Ti aspettiamo presto di nuovo qui in <b style="color:#1976d2">FuelUp</b>! <span style="font-size:1.5em;">💪</span></p>
+                                        </div>
+                                    </div>
+                                    `;
+
                                     const mailOptions = {
                                         from: {
                                             name: "FuelUp",
@@ -334,16 +384,63 @@ function store(req, res, next) {
                                         },
                                         to: post.email, // email del cliente
                                         subject: "Conferma ordine FuelUp",
-                                        text: `Grazie per il tuo ordine! Il Numero del tuo ordine è: ${orderNumber}
-${totalAmount + delivery_fee} € è la somma che ti è stata addebitata sulla carta con la quale hai pagato
-${soldSummary} 
-sono i prodotti che hai acquistato, ti aspettiamo presto di nuovo qui in FuelUp`
+                                        html: htmlMail
                                     };
                                     sendMail(transporter, mailOptions);
 
                                     // Invia la mail al venditore
                                     const sellerEmail = process.env.EMAIL_USER;
                                     // Crea un riepilogo dei prodotti venduti
+                                    // Costruzione HTML per il venditore
+                                    const htmlItemsSeller = itemList.map(item => `
+                                        <tr>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;">🍃 ${item.slug}</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} 🛒</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#28a745;font-weight:bold;">${item.price} €</td>
+                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ff9800;font-weight:bold;">${(item.price * item.amount).toFixed(2)} €</td>
+                                        </tr>
+                                    `).join("");
+
+                                    const htmlMailSeller = `
+                                    <div style="font-family:Arial,sans-serif;background:linear-gradient(135deg,#f7f7f7 60%,#e3f2fd 100%);padding:30px;">
+                                        <div style="max-width:600px;margin:auto;background:#fff;border-radius:16px;box-shadow:0 4px 16px #b3e5fc;padding:32px;border:2px solid #90caf9;">
+                                            <h2 style="color:#1976d2;text-align:center;margin-bottom:24px;font-size:2em;">💪 Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!</h2>
+                                            <p style="font-size:20px;color:#333;text-align:center;margin-bottom:16px;">Ordine: <b style="color:#ff9800;font-size:1.3em">${orderNumber}</b></p>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🛍️ Prodotti venduti</h3>
+                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#e3f2fd;border-radius:8px;overflow:hidden;">
+                                                <thead>
+                                                    <tr style="background:#90caf9;">
+                                                        <th style="padding:8px;text-align:left;color:#1976d2;">Prodotto</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Quantità</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Prezzo unitario</th>
+                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Totale</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${htmlItemsSeller}
+                                                </tbody>
+                                            </table>
+                                            <div style="font-size:18px;color:#333;margin-bottom:16px;background:#fffde7;padding:16px;border-radius:8px;border:1px solid #ffe082;">
+                                                <b>Totale prodotti:</b> <span style="color:#388e3c;font-weight:bold;">${totalAmount.toFixed(2)} €</span> <br>
+                                                <b>Spese di spedizione:</b> <span style="color:#1976d2;font-weight:bold;">${delivery_fee.toFixed(2)} €</span> <br>
+                                                <b>Totale ordine:</b> <span style="color:#ff9800;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} €</span>
+                                            </div>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🚚 Dati spedizione cliente</h3>
+                                            <div style="font-size:17px;color:#333;margin-bottom:16px;background:#e3f2fd;padding:16px;border-radius:8px;border:1px solid #90caf9;">
+                                                <b>👤 Nome:</b> ${post.name} ${post.surname}<br>
+                                                <b>📧 Email:</b> ${post.email}<br>
+                                                <b>📞 Telefono:</b> ${post.phone_number}<br>
+                                                <b>🏠 Indirizzo:</b> ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}<br>
+                                                <b>🆔 Codice fiscale:</b> ${post.fiscal_code}
+                                            </div>
+                                            <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
+                                            <p style="font-size:18px;color:#333;text-align:center;margin-top:24px;">Complimenti per la vendita! <span style="font-size:1.5em;">💪</span></p>
+                                        </div>
+                                    </div>
+                                    `;
+
                                     const mailOptionsSeller = {
                                         from: {
                                             name: "FuelUp",
@@ -351,7 +448,7 @@ sono i prodotti che hai acquistato, ti aspettiamo presto di nuovo qui in FuelUp`
                                         },
                                         to: sellerEmail,
                                         subject: `Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!`,
-                                        text: `Hai venduto i seguenti prodotti con l'ordine ${orderNumber}:\n${soldSummary}\n\nEmail cliente: ${post.email}\nIndirizzo: ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}`
+                                        html: htmlMailSeller
                                     };
                                     sendMail(transporter, mailOptionsSeller);
                                 });
