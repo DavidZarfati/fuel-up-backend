@@ -328,37 +328,61 @@ function search(req, res, next) {
 
 // Cerca prodotti che condividono più categorie con un prodotto dato
 function searchByCategories(req, res, next) {
-    const slug = req.params.slug;
+  const slug = req.params.slug;
 
-    if (!slug) {
-        return res.status(400).json({
-            errore: "ParametroMancante",
-            descrizione: "Slug prodotto richiesto"
-        });
-    }
+  const limit = parseInt(req.query.limit, 10) || 12;
+  const page = parseInt(req.query.page, 10) || 1;
 
-    // 1) Trova productId dallo slug
-    const productQuery = `
+  const safeLimit = Math.min(limit, 50); // max 50 per sicurezza
+  const safePage = page > 0 ? page : 1;
+  const offset = (safePage - 1) * safeLimit;
+
+  if (!slug) {
+    return res.status(400).json({
+      errore: "ParametroMancante",
+      descrizione: "Slug prodotto richiesto",
+    });
+  }
+
+  // 1) Trova productId dallo slug
+  const productQuery = `
     SELECT id
     FROM products
     WHERE slug = ?
     LIMIT 1
   `;
 
-    connection.query(productQuery, [slug], (err, productResults) => {
-        if (err) return next(err);
+  connection.query(productQuery, [slug], (err, productResults) => {
+    if (err) return next(err);
 
-        if (!productResults.length) {
-            return res.status(404).json({
-                errore: "ProdottoNonTrovato",
-                descrizione: "Nessun prodotto trovato con questo slug"
-            });
-        }
+    if (!productResults.length) {
+      return res.status(404).json({
+        errore: "ProdottoNonTrovato",
+        descrizione: "Nessun prodotto trovato con questo slug",
+      });
+    }
 
-        const productId = productResults[0].id;
+    const productId = productResults[0].id;
 
-        // 2) Trova prodotti correlati tramite categorie condivise
-        const similarProductsQuery = `
+    // 2A) COUNT totale prodotti correlati (per paginazione)
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM (
+        SELECT p2.id
+        FROM products_categories pc1
+        JOIN products_categories pc2
+          ON pc2.category_id = pc1.category_id
+         AND pc2.product_id <> pc1.product_id
+        JOIN products p2
+          ON p2.id = pc2.product_id
+        WHERE pc1.product_id = ?
+          AND p2.is_active = 1
+        GROUP BY p2.id
+      ) AS t
+    `;
+
+    // 2B) Query dati correlati + paginazione
+    const dataQuery = `
       SELECT 
         p2.*,
         COUNT(DISTINCT pc2.category_id) AS shared_categories
@@ -372,19 +396,37 @@ function searchByCategories(req, res, next) {
         AND p2.is_active = 1
       GROUP BY p2.id
       ORDER BY shared_categories DESC, p2.name ASC
+      LIMIT ? OFFSET ?
     `;
 
-        connection.query(similarProductsQuery, [productId], (err, results) => {
-            if (err) return next(err);
+    connection.query(countQuery, [productId], (err, countResults) => {
+      if (err) return next(err);
 
-            res.json({
-                prodotto_base: slug,
-                totale: results.length,
-                risultati: results
-            });
+      const total = countResults?.[0]?.total ?? 0;
+      const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+      connection.query(dataQuery, [productId, safeLimit, offset], (err, results) => {
+        if (err) return next(err);
+
+        res.json({
+          prodotto_base: slug,
+          paginazione: {
+            pagina_corrente: safePage,
+            per_pagina: safeLimit,
+            totale_risultati: total,
+            totale_pagine: totalPages,
+            has_prev: safePage > 1,
+            has_next: safePage < totalPages,
+            prev_page: safePage > 1 ? safePage - 1 : null,
+            next_page: safePage < totalPages ? safePage + 1 : null,
+          },
+          risultati: results,
         });
+      });
     });
+  });
 }
+
 
 
 
