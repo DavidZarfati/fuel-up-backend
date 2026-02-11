@@ -1,3 +1,7 @@
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { text } from "express";
 import connection from "../database/db.js";
 import nodemailer from "nodemailer";
@@ -393,7 +397,14 @@ function store(req, res, next) {
                                         },
                                         to: post.email, // email del cliente
                                         subject: "Conferma ordine FuelUp",
-                                        html: htmlMail
+                                        html: htmlMail,
+                                        attachments: [
+                                            {
+                                                filename: "logo.png",
+                                                path: __dirname + '/../public/images/logo.png',
+                                                cid: "logoimg"
+                                            }
+                                        ]
                                     };
                                     sendMail(transporter, mailOptions);
 
@@ -458,7 +469,14 @@ function store(req, res, next) {
                                         },
                                         to: sellerEmail,
                                         subject: `Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!`,
-                                        html: htmlMailSeller
+                                        html: htmlMailSeller,
+                                        attachments: [
+                                            {
+                                                filename: "logo.png",
+                                                path: __dirname + '/../public/images/logo.png',
+                                                cid: "logoimg"
+                                            }
+                                        ]
                                     };
                                     sendMail(transporter, mailOptionsSeller);
                                 });
