@@ -1,4 +1,3 @@
-
 import { text } from "express";
 import connection from "../database/db.js";
 import nodemailer from "nodemailer";
@@ -30,7 +29,8 @@ const sendMail = async (transporter, mailOptions) => {
     }
 };
 
-
+// Definizione logoHtml per email
+const logoHtml = `<div style="text-align:center;margin-bottom:24px;"><img src="cid:logoimg" alt="FuelUp Logo" style="height:60px;margin-bottom:8px;"></div>`;
 
 function index(req, res, next) {
     const indexQuery = "SELECT * FROM invoices";
@@ -268,7 +268,7 @@ function store(req, res, next) {
                 let totalWeight = 0;
 
                 connection.query(
-                    `SELECT id, slug, discount_price, weight_kg FROM products WHERE slug IN (?)`,
+                    `SELECT id, slug, price, discount_price, weight_kg FROM products WHERE slug IN (?)`,
                     [slugs],
                     (err, productsResult) => {
                         if (err) return connection.rollback(() => next(err));
@@ -280,7 +280,15 @@ function store(req, res, next) {
                         for (const item of items) {
                             const product = productMap[item.slug];
                             const amount = item.amount;
-                            const price = product.discount_price;
+                            // Usa discount_price se esiste e non è null/undefined, altrimenti price
+                            let price = null;
+                            if (product.discount_price !== undefined && product.discount_price !== null) {
+                                price = product.discount_price;
+                            } else if (product.price !== undefined && product.price !== null) {
+                                price = product.price;
+                            }
+                            // fallback: se ancora null, imposta a 0
+                            if (price === null) price = 0;
                             const weight = product.weight_kg;
 
                             totalAmount += price * amount;
@@ -330,49 +338,50 @@ function store(req, res, next) {
                                     // Costruzione HTML email
                                     const htmlItems = itemList.map(item => `
                                         <tr>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;">🍃 ${item.slug}</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} 🛒</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#28a745;font-weight:bold;">${item.price} €</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ff9800;font-weight:bold;">${(item.price * item.amount).toFixed(2)} €</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.slug}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
                                         </tr>
                                     `).join("");
 
                                     const htmlMail = `
-                                    <div style="font-family:Arial,sans-serif;background:linear-gradient(135deg,#f7f7f7 60%,#e3f2fd 100%);padding:30px;">
-                                        <div style="max-width:600px;margin:auto;background:#fff;border-radius:16px;box-shadow:0 4px 16px #b3e5fc;padding:32px;border:2px solid #90caf9;">
-                                            <h2 style="color:#1976d2;text-align:center;margin-bottom:24px;font-size:2em;">🎉 Grazie per il tuo ordine! 🎉</h2>
-                                            <p style="font-size:20px;color:#333;text-align:center;margin-bottom:16px;">Il Numero del tuo ordine è:<br><b style="color:#ff9800;font-size:1.3em">${orderNumber}</b></p>
+                                    <div style="font-family:Arial,sans-serif;background:#181c2b;padding:30px;">
+                                        <div style="max-width:600px;margin:auto;background:#23263a;border-radius:16px;box-shadow:0 4px 16px #1976d2;padding:32px;border:2px solid #1976d2;">
+                                            ${logoHtml}
+                                            <h2 style="color:#eee;text-align:center;margin-bottom:24px;font-size:2em;">🎉 Grazie per il tuo ordine! 🎉</h2>
+                                            <p style="font-size:20px;color:#fff;text-align:center;margin-bottom:16px;">Il Numero del tuo ordine è:<br><b style="color:#eee;font-size:1.3em">${orderNumber}</b></p>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🛍️ Riepilogo prodotti acquistati</h3>
-                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#e3f2fd;border-radius:8px;overflow:hidden;">
+                                            <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Riepilogo prodotti acquistati</h3>
+                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#23263a;border-radius:8px;overflow:hidden;">
                                                 <thead>
-                                                    <tr style="background:#90caf9;">
-                                                        <th style="padding:8px;text-align:left;color:#1976d2;">Prodotto</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Quantità</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Prezzo unitario</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Totale</th>
+                                                    <tr style="background:#1976d2;">
+                                                        <th style="padding:8px;text-align:left;color:#fff;">Prodotto</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Quantità</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Prezzo unitario</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Totale</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     ${htmlItems}
                                                 </tbody>
                                             </table>
-                                            <div style="font-size:18px;color:#333;margin-bottom:16px;background:#fffde7;padding:16px;border-radius:8px;border:1px solid #ffe082;">
-                                                <b>Totale prodotti:</b> <span style="color:#388e3c;font-weight:bold;">${totalAmount.toFixed(2)} €</span> <br>
-                                                <b>Spese di spedizione:</b> <span style="color:#1976d2;font-weight:bold;">${delivery_fee.toFixed(2)} €</span> <br>
-                                                <b>Totale addebitato:</b> <span style="color:#ff9800;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} €</span>
+                                            <div style="font-size:18px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
+                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">${totalAmount.toFixed(2)} EUR</span> <br>
+                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">${delivery_fee.toFixed(2)} EUR</span> <br>
+                                                <b style="color:#fff;">Totale addebitato:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} EUR</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🚚 Dati spedizione</h3>
-                                            <div style="font-size:17px;color:#333;margin-bottom:16px;background:#e3f2fd;padding:16px;border-radius:8px;border:1px solid #90caf9;">
-                                                <b>👤 Nome:</b> ${post.name} ${post.surname}<br>
-                                                <b>📧 Email:</b> ${post.email}<br>
-                                                <b>📞 Telefono:</b> ${post.phone_number}<br>
-                                                <b>🏠 Indirizzo:</b> ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}<br>
-                                                <b>🆔 Codice fiscale:</b> ${post.fiscal_code}
+                                            <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Dati spedizione</h3>
+                                            <div style="font-size:17px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
+                                            <b style="color:#eee;"> Nome:</b> <span style="color:#fff;">${post.name} ${post.surname}</span><br>
+                                            <b style="color:#eee;"> Email:</b> <span style="color:#eee;font-weight:bold;">${post.email}</span><br>
+                                                <b style="color:#eee;"> Telefono:</b> <span style="color:#fff;">${post.phone_number}</span><br>
+                                                <b style="color:#eee;"> Indirizzo:</b> <span style="color:#fff;">${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}</span><br>
+                                                <b style="color:#eee;"> Codice fiscale:</b> <span style="color:#fff;">${post.fiscal_code}</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <p style="font-size:18px;color:#333;text-align:center;margin-top:24px;">✨ Ti aspettiamo presto di nuovo qui in <b style="color:#1976d2">FuelUp</b>! <span style="font-size:1.5em;">💪</span></p>
+                                            <p style="font-size:18px;color:#fff;text-align:center;margin-top:24px;">✨ Ti aspettiamo presto di nuovo qui in <b style="color:#1976d2">FuelUp</b>! <span style="font-size:1.5em;">💪</span></p>
                                         </div>
                                     </div>
                                     `;
@@ -394,49 +403,50 @@ function store(req, res, next) {
                                     // Costruzione HTML per il venditore
                                     const htmlItemsSeller = itemList.map(item => `
                                         <tr>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;">🍃 ${item.slug}</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} 🛒</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#28a745;font-weight:bold;">${item.price} €</td>
-                                            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ff9800;font-weight:bold;">${(item.price * item.amount).toFixed(2)} €</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.slug}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
                                         </tr>
                                     `).join("");
 
                                     const htmlMailSeller = `
-                                    <div style="font-family:Arial,sans-serif;background:linear-gradient(135deg,#f7f7f7 60%,#e3f2fd 100%);padding:30px;">
-                                        <div style="max-width:600px;margin:auto;background:#fff;border-radius:16px;box-shadow:0 4px 16px #b3e5fc;padding:32px;border:2px solid #90caf9;">
+                                    <div style="font-family:Arial,sans-serif;background:#181c2b;padding:30px;">
+                                        <div style="max-width:600px;margin:auto;background:#23263a;border-radius:16px;box-shadow:0 4px 16px #1976d2;padding:32px;border:2px solid #1976d2;">
+                                            ${logoHtml}
                                             <h2 style="color:#1976d2;text-align:center;margin-bottom:24px;font-size:2em;">💪 Hai venduto ${itemList.reduce((sum, i) => sum + i.amount, 0)} prodotti!</h2>
-                                            <p style="font-size:20px;color:#333;text-align:center;margin-bottom:16px;">Ordine: <b style="color:#ff9800;font-size:1.3em">${orderNumber}</b></p>
+                                            <p style="font-size:20px;color:#fff;text-align:center;margin-bottom:16px;">Ordine: <b style="color:#eee;font-size:1.3em">${orderNumber}</b></p>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🛍️ Prodotti venduti</h3>
-                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#e3f2fd;border-radius:8px;overflow:hidden;">
+                                            <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Prodotti venduti</h3>
+                                            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#23263a;border-radius:8px;overflow:hidden;">
                                                 <thead>
-                                                    <tr style="background:#90caf9;">
-                                                        <th style="padding:8px;text-align:left;color:#1976d2;">Prodotto</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Quantità</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Prezzo unitario</th>
-                                                        <th style="padding:8px;text-align:center;color:#1976d2;">Totale</th>
+                                                    <tr style="background:#1976d2;">
+                                                        <th style="padding:8px;text-align:left;color:#fff;">Prodotto</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Quantità</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Prezzo unitario</th>
+                                                        <th style="padding:8px;text-align:center;color:#fff;">Totale</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     ${htmlItemsSeller}
                                                 </tbody>
                                             </table>
-                                            <div style="font-size:18px;color:#333;margin-bottom:16px;background:#fffde7;padding:16px;border-radius:8px;border:1px solid #ffe082;">
-                                                <b>Totale prodotti:</b> <span style="color:#388e3c;font-weight:bold;">${totalAmount.toFixed(2)} €</span> <br>
-                                                <b>Spese di spedizione:</b> <span style="color:#1976d2;font-weight:bold;">${delivery_fee.toFixed(2)} €</span> <br>
-                                                <b>Totale ordine:</b> <span style="color:#ff9800;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} €</span>
+                                            <div style="font-size:18px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
+                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">${totalAmount.toFixed(2)} EUR</span> <br>
+                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">${delivery_fee.toFixed(2)} EUR</span> <br>
+                                                <b style="color:#fff;">Totale ordine:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} EUR</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <h3 style="color:#388e3c;margin-bottom:12px;font-size:1.2em;">🚚 Dati spedizione cliente</h3>
-                                            <div style="font-size:17px;color:#333;margin-bottom:16px;background:#e3f2fd;padding:16px;border-radius:8px;border:1px solid #90caf9;">
-                                                <b>👤 Nome:</b> ${post.name} ${post.surname}<br>
-                                                <b>📧 Email:</b> ${post.email}<br>
-                                                <b>📞 Telefono:</b> ${post.phone_number}<br>
-                                                <b>🏠 Indirizzo:</b> ${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}<br>
-                                                <b>🆔 Codice fiscale:</b> ${post.fiscal_code}
+                                            <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Dati spedizione cliente</h3>
+                                            <div style="font-size:17px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
+                                                <b style="color:#eee;"> Nome:</b> <span style="color:#fff;">${post.name} ${post.surname}</span><br>
+                                                <b style="color:#eee;"> Email:</b> <span style="color:#fff;font-weight:bold;">${post.email}</span><br>
+                                                <b style="color:#eee;"> Telefono:</b> <span style="color:#fff;">${post.phone_number}</span><br>
+                                                <b style="color:#eee;"> Indirizzo:</b> <span style="color:#fff;">${post.address} ${post.street_number}, ${post.city} ${post.postal_code}, ${post.nation}</span><br>
+                                                <b style="color:#eee;"> Codice fiscale:</b> <span style="color:#fff;">${post.fiscal_code}</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
-                                            <p style="font-size:18px;color:#333;text-align:center;margin-top:24px;">Complimenti per la vendita! <span style="font-size:1.5em;">💪</span></p>
+                                            <p style="font-size:18px;color:#fff;text-align:center;margin-top:24px;">Complimenti per la vendita! <span style="font-size:1.5em;">💪</span></p>
                                         </div>
                                     </div>
                                     `;
