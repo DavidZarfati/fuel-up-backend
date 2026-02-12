@@ -345,8 +345,8 @@ function store(req, res, next) {
                                         <tr>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.name}</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">EUR ${item.price}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">EUR ${(item.price * item.amount).toFixed(2)}</td>
                                         </tr>
                                     `).join("");
 
@@ -372,9 +372,9 @@ function store(req, res, next) {
                                                 </tbody>
                                             </table>
                                             <div style="font-size:18px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
-                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">${totalAmount.toFixed(2)} EUR</span> <br>
-                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">${delivery_fee.toFixed(2)} EUR</span> <br>
-                                                <b style="color:#fff;">Totale addebitato:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} EUR</span>
+                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">EUR ${totalAmount.toFixed(2)}</span> <br>
+                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">EUR ${delivery_fee.toFixed(2)}</span> <br>
+                                                <b style="color:#fff;">Totale addebitato:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">EUR ${(totalAmount + delivery_fee).toFixed(2)}</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
                                             <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Dati spedizione</h3>
@@ -417,8 +417,8 @@ function store(req, res, next) {
                                         <tr>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.name}</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">EUR ${item.price}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">EUR ${(item.price * item.amount).toFixed(2)}</td>
                                         </tr>
                                     `).join("");
 
@@ -444,9 +444,9 @@ function store(req, res, next) {
                                                 </tbody>
                                             </table>
                                             <div style="font-size:18px;color:#fff;margin-bottom:16px;background:#23263a;padding:16px;border-radius:8px;border:2px solid #eee;">
-                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">${totalAmount.toFixed(2)} EUR</span> <br>
-                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">${delivery_fee.toFixed(2)} EUR</span> <br>
-                                                <b style="color:#fff;">Totale ordine:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">${(totalAmount + delivery_fee).toFixed(2)} EUR</span>
+                                                <b style="color:#fff;">Totale prodotti:</b> <span style="color:#eee;font-weight:bold;">EUR ${totalAmount.toFixed(2)}</span> <br>
+                                                <b style="color:#fff;">Spese di spedizione:</b> <span style="color:#eee;font-weight:bold;">EUR ${delivery_fee.toFixed(2)}</span> <br>
+                                                <b style="color:#fff;">Totale ordine:</b> <span style="color:#eee;font-weight:bold;font-size:1.2em;">EUR ${(totalAmount + delivery_fee).toFixed(2)}</span>
                                             </div>
                                             <hr style="margin:24px 0;border:none;border-top:2px dashed #90caf9;">
                                             <h3 style="color:#eee;margin-bottom:12px;font-size:1.2em;"> Dati spedizione cliente</h3>
