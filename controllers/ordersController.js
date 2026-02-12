@@ -272,7 +272,7 @@ function store(req, res, next) {
                 let totalWeight = 0;
 
                 connection.query(
-                    `SELECT id, slug, price, discount_price, weight_kg FROM products WHERE slug IN (?)`,
+                    `SELECT id, slug, price, discount_price, weight_kg, name FROM products WHERE slug IN (?)`,
                     [slugs],
                     (err, productsResult) => {
                         if (err) return connection.rollback(() => next(err));
@@ -291,6 +291,7 @@ function store(req, res, next) {
                             } else if (product.price !== undefined && product.price !== null) {
                                 price = product.price;
                             }
+                            const name = product.name;
                             // fallback: se ancora null, imposta a 0
                             if (price === null) price = 0;
                             const weight = product.weight_kg;
@@ -299,7 +300,7 @@ function store(req, res, next) {
                             totalWeight += weight * amount;
 
                             itemValues.push([invoiceId, product.id, amount, price]);
-                            itemList.push({ slug: product.slug, amount: amount, price: price });
+                            itemList.push({ slug: product.slug, amount: amount, price: price, name: name });
                         }
 
                         //console.log(itemList);
@@ -342,7 +343,7 @@ function store(req, res, next) {
                                     // Costruzione HTML email
                                     const htmlItems = itemList.map(item => `
                                         <tr>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.slug}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.name}</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
@@ -414,7 +415,7 @@ function store(req, res, next) {
                                     // Costruzione HTML per il venditore
                                     const htmlItemsSeller = itemList.map(item => `
                                         <tr>
-                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.slug}</td>
+                                            <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;"> ${item.name}</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.amount} </td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${item.price} EUR</td>
                                             <td style="color:#eee;padding:8px;border-bottom:1px solid #eee;text-align:center;color:#eee;font-weight:bold;">${(item.price * item.amount).toFixed(2)} EUR</td>
